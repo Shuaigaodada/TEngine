@@ -1,1 +1,1 @@
-unicurses
+uni-curses==2.1.3
