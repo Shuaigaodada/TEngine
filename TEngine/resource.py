@@ -2,11 +2,13 @@ import os
 import json
 import pickle
 import typing as T
+from Component import Component
 __all__ = ["Resource", "FileLoader"]
 
 
-class FileLoader:
+class FileLoader(Component):
     def __init__(self, filePath: str) -> None:
+        super().__init__()
         self.filePath = filePath
         return
 
