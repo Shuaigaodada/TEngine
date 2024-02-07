@@ -1,3 +1,4 @@
+from Mouse import Mouse
 import unicurses as curses
 from Component import Component
 
@@ -6,11 +7,15 @@ class Input(Component):
     def __init__(self, stdscr: int) -> None:
         super().__init__()
         self.stdscr: int = stdscr
+        self.logKeys: bool = False
+        self.mouse: Mouse = Mouse()
         return
     
     def KeyDown(self) -> int:
         """获取输入"""
-        return curses.wgetch(self.stdscr)
+        key = curses.wgetch(self.stdscr)
+        if self.logger and self.logKeys:
+            self.logger.Info(f"Input: {key}")
 
     A = ord("a")
     B = ord("b")
