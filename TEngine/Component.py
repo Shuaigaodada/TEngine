@@ -10,3 +10,8 @@ class Component:
         """设置日志记录器"""
         self.logger = logger
         return
+    
+    def SetScreen(self, stdscr: int) -> None:
+        """重置绘制的屏幕"""
+        self.stdscr = stdscr
+    
