@@ -21,18 +21,29 @@ TEngine应当有几个类实例
 
 class TEngine:
     def __init__(self) -> None:
-        self.stdscr = curses.stdscr
-        self.logger: DebugLogger = None if not DebugLogger.instance else DebugLogger.instance[0]
-        self.renderer = Renderer()
-        self.screen = Screen(self.stdscr)
-        self.input = Input(self.stdscr)
+        self.stdscr  :  int          = curses.stdscr
+        self.logger  :  DebugLogger  = None if not DebugLogger.instance else DebugLogger.instance[0]
+        self.renderer:  Renderer     = Renderer()
+        self.screen  :  Screen       = Screen(self.stdscr)
+        self.input   :  Input        = Input(self.stdscr)
         return
     
     def SetLogger(self, logger: DebugLogger) -> None:
         """设置日志记录器"""
         self.logger = logger
         self.renderer.SetLogger(logger)
+        self.screen.SetLogger(logger)
+        self.input.SetLogger(logger)
+        self.input.mouse.SetLogger(logger) 
         return
+    
+    def SetScreen(self, stdscr: int) -> None:
+        """设置新的屏幕为绘制屏幕"""
+        self.renderer.SetScreen(stdscr)
+        self.screen.SetScreen(stdscr)
+        self.input.SetScreen(stdscr)
+        self.stdscr = stdscr
+        return 
     
     def Init(self, registerExit: bool = True) -> None:
         """
