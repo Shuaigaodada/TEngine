@@ -53,6 +53,7 @@ class Mouse(Component):
         return
     
     def CheckClick(self, mouseEvent: MouseClickEvent) -> MouseClickEvent:
+        """检查点击事件是否在点击区域内，内部调用"""
         clickedBox: T.List[T.Tuple[str, BoxInfo]] = []
         for name, box in self.clickBox.items():
             if box.x <= mouseEvent.x <= box.x + box.w and box.y <= mouseEvent.y <= box.y + box.h:
@@ -60,6 +61,7 @@ class Mouse(Component):
         return MouseClickEvent(mouseEvent.x, mouseEvent.y, mouseEvent.bstate, clickedBox)
     
     def GetMouse(self) -> MouseClickEvent:
+        """获取鼠标点击， 返回对象，包含点击位置，点击状态，点击区域名称"""
         _, mx, my, _, bstate = curses.getmouse()
         state = ClickStatus.UNKNOWN
         if   state & ClickStatus.PRESSED:               state = ClickStatus.PRESSED
