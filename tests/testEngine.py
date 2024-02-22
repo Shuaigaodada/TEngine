@@ -1,5 +1,4 @@
 import env
-import unicurses as curses
 from TEngine import TEngine
 from TEngine import DebugLogger
 from TEngine.Characters import Characters
