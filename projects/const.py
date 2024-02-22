@@ -1,5 +1,5 @@
 import typing as T
-from Player import *
+from player import *
 Star = "★"
 OneStar = "★"
 TwoStar = "★★"
@@ -17,3 +17,9 @@ def roundString(round: int, stage: int):
     return f"{round}-{stage}"
 
 getAwardTip = " - 你有奖励未领取，按g领取奖励"
+
+
+file_prob = "roleProbs.json"
+file_role = "rolesInfo.data"
+file_count = "cardCounts.count"
+file_levelexp = "upgradeExp.json"

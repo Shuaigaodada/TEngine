@@ -1,5 +1,6 @@
-import typing as T
+import const
 import random
+import typing as T
 from roles import *
 from TEngine import Resource
 
@@ -15,8 +16,8 @@ class Stack:
     def size(self) -> int:
         return len(self.__backStack)
     
-    def push(self, role: Role) -> None:
-        self.__backStack.append(role)
+    def push(self, *roles: T.Tuple[Role]) -> None:
+        self.__backStack.extend(roles)
         return
     
     def pop(self) -> Role:
@@ -26,17 +27,17 @@ class CardPile:
     def __init__(self) -> None:
         self.__pile:        T.List[T.List[Role]]        = []
         self.__prob:        T.Dict[str, T.List[int]]    = {}
-        self.stack:       Stack                       = Stack()
+        self.stack:         Stack                       = Stack()
         
         
         self.init()
         
     def init(self) -> None:
-        self.__prob = resource.Load("roleProbs.json").AsJson()
+        self.__prob             = resource.load( const.file_prob ).asJson()
+        roles                   = resource.load( const.file_role ).asLines()
+        counts                  = resource.load( const.file_count ).asString()
         
-        roles = resource.Load("rolesInfo.data").AsLines()
         
-        counts = resource.Load("cardCounts.count").AsString()
         counts = list(map(int, counts.split(",")))
         
         self.__pile = [list() for _ in range(5)]
@@ -66,7 +67,8 @@ class CardPile:
     def draw(self, level: int) -> T.List[Role]:
         return [self.drawOnce(level) for _ in range(5)]
     
-    def push(self) -> None:
+    def push(self, *roles: T.Tuple[Role]) -> None:
+        self.stack.push(*roles)
         for _ in self.stack.size:
             role: Role = self.stack.pop()
             self.__pile[role.cost - 1].append(role)

@@ -29,10 +29,20 @@ class Role:
         
         self.score = 0
     
+    def __eq__( self, other: "Role" ) -> bool:
+        return self.name == other.name and self.level == other.level
+    
     def initiveSkill(self) -> None:
         pass
     def passiveSkill(self) -> None:
         pass
+    
+    @property
+    def sell_price(self) -> int:
+        return self.cost * ( 3 ** self.level - 1 )
+    @property
+    def sell_count(self) -> T.List["Role"]:
+        return [ type( self )() ] * ( 3 ** self.level - 1 )
 
     @property
     def name_lenght(self) -> int:
@@ -49,7 +59,7 @@ class Role:
         if ChEnRoleNames is None:
             basePath = os.path.dirname(__file__)
             srcPath = os.path.join(basePath, 'src')
-            ChEnRoleNames = Resource(srcPath).Load("TranslateNames.json").AsJson()    
+            ChEnRoleNames = Resource(srcPath).load("TranslateNames.json").asJson()    
         
         try:
             name = roleName if type(roleName) is str else roleName.name
