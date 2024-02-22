@@ -12,25 +12,26 @@ class FileLoader(Component):
         self.filePath = filePath
         return
 
-    def AsString(self) -> str:
+    def asString(self) -> str:
         with open(self.filePath, "r") as file:
             return file.read()
     
-    def AsFile(self) -> T.IO:
+    def asFile(self) -> T.IO:
         return open(self.filePath, "r")
-    def AsLines(self) -> T.List[str]:
+    
+    def asLines(self) -> T.List[str]:
         with open(self.filePath, "r") as file:
             return file.readlines()
     
-    def AsJson(self) -> T.Dict:
+    def asJson(self) -> T.Dict:
         with open(self.filePath, "r") as file:
             return json.load(file)
     
-    def AsObject(self) -> object:
+    def asObject(self) -> object:
         with open(self.filePath, "rb") as file:
             return pickle.load(file)
         
-    def Write(self, data: str | T.Dict | object) -> None:
+    def write(self, data: str | T.Dict | object) -> None:
         if type(data) is str:
             with open(self.filePath, "w") as file:
                 file.write(data)
@@ -43,7 +44,7 @@ class FileLoader(Component):
         return
 
     @property
-    def Path(self) -> str:
+    def path(self) -> str:
         return self.filePath
 
 class Resource:
@@ -56,7 +57,7 @@ class Resource:
             self.srcPath = os.path.join(basePath, srcPath)
         return
     
-    def Load(self, name: str, existOk: bool = False) -> FileLoader:
+    def load(self, name: str, existOk: bool = False) -> FileLoader:
         # 分割文件路径
         dirs = name.split("/")
         
