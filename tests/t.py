@@ -3,6 +3,7 @@ import typing as T
 
 scr = curses.initscr()
 
-scr.getmaxx()
+scr.addstr(chr(0x2588) * 3)
+scr.getch()
 
 curses.endwin()
