@@ -20,22 +20,22 @@ class DebugLogger:
             open(logFile, "w").close()
         
         self.logFile = logFile
-        self.Open(self.logFile)
+        self.open(self.logFile)
         self.instance.append(self)
         return
     
-    def Update(self) -> None:
+    def update(self) -> None:
         """更新日志记录器"""
-        self.Close()
-        self.Open(self.logFile, "a")
+        self.close()
+        self.open(self.logFile, "a")
         return
     
-    def Open(self, filePath: str, mode = "w") -> None:
+    def open(self, filePath: str, mode = "w") -> None:
         """打开日志文件"""
         self.logFile = filePath
         self.logFileHandler = open(self.logFile, mode)
         return
-    def Close(self) -> None:
+    def close(self) -> None:
         """关闭日志文件"""
         try:
             self.logFileHandler.close()
@@ -43,7 +43,7 @@ class DebugLogger:
             pass
         return
     
-    def Info(self, *messages: T.Tuple[str], sep: str = ' ') -> None:
+    def info(self, *messages: T.Tuple[str], sep: str = ' ') -> None:
         """记录信息
 
         参数:
@@ -55,7 +55,7 @@ class DebugLogger:
         
         self.logFileHandler.write(f'[{time.strftime("%Y-%m-%d %H:%M:%S")}] INFO: {message}\n')
         return
-    def Warning(self, *messages: T.Tuple[str], sep: str = ' ') -> None:
+    def warning(self, *messages: T.Tuple[str], sep: str = ' ') -> None:
         """记录警告
 
         参数:
@@ -68,7 +68,7 @@ class DebugLogger:
         self.logFileHandler.write(f'[{time.strftime("%Y-%m-%d %H:%M:%S")}] WARNING: {message}\n')
         return
     
-    def Error(self, *messages: T.Tuple[str], sep: str = ' ') -> None:
+    def error(self, *messages: T.Tuple[str], sep: str = ' ') -> None:
         """记录错误
 
         参数:
@@ -81,7 +81,7 @@ class DebugLogger:
         self.logFileHandler.write(f'[{time.strftime("%Y-%m-%d %H:%M:%S")}] ERROR: {message}\n')
         return
         
-    def Clear(self) -> None:
+    def clear(self) -> None:
         """清空日志文件"""
         self.logFileHandler.close()
         self.logFileHandler = open(self.logFile, 'w')
