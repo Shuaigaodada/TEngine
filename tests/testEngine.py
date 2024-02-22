@@ -3,6 +3,7 @@ import unicurses as curses
 from TEngine import TEngine
 from TEngine import DebugLogger
 from TEngine.Characters import Characters
+from TEngine.Engine.Component import Text
 
 
 class Test(TEngine):
@@ -11,41 +12,29 @@ class Test(TEngine):
         return
     
     def main(self) -> None:
-        self.Init( True )
+        self.init( True )
         
-        logger = DebugLogger()
-        self.SetLogger(logger)
+        logger = DebugLogger( "logs/test.log" )
+        self.setLogger(logger)
         
-        self.input.mouse.Init()
-        self.input.mouse.SetClickBox("test", 0, 0, "Hello World")
+        self.input.mouse.init()
         
-        self.screen.Clear()
+        self.renderer.create("green", "#00FF00", "#000000")
         
-        x = 0
-        y = 0
-        width = 10
-        height = 10
-        self.renderer.Create("green", "#00FF00", "#000000")
-
-        for char in Characters.__dict__.values():
-            if isinstance(char, str) and len(char) == 1:
-                self.screen.Write(char, x, y)
-                if x >= 50:
-                    x = 0
-                    y += 1
-                x += 2
+        self.screen.clear()
+        self.screen.write("Hello World", color="green").set_clickBox( "test" )
+        self.screen.write("Other Text")
         
-        self.screen.Update()
+        self.screen.update()
         while True:
-            key = self.input.KeyDown()
+            key = self.input.get()
             if key == self.input.MOUSE_KEY:
-                mouseEvent = self.input.mouse.GetMouse()
+                mouseEvent = self.input.mouse.get()
                 if "test" in mouseEvent.clicked or "test" in mouseEvent.pressed:
-                    self.logger.Info("Click test")
-                    self.logger.Update()
-                else:
-                    if not mouseEvent.released:
-                        break
+                    self.logger.info("Click test")
+                    self.logger.update()
+            if key == self.input.Q:
+                break
         return
     
 Test().main()

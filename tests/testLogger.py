@@ -2,6 +2,6 @@ import env
 from TEngine import DebugLogger
 
 logger = DebugLogger("/workspaces/TEngine/logs/test.log")
-logger.Info("Hello World")
-logger.Error("Hello World")
-logger.Warning("Hello World")
+logger.info("Hello World")
+logger.error("Hello World")
+logger.warning("Hello World")
