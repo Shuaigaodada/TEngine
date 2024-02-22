@@ -18,10 +18,13 @@ class ClickStatus:
     MIDDLE_TRIPLE_CLICK: int = curses.BUTTON3_TRIPLE_CLICKED
     UNKNOWN: int = -1
 
-
 class MouseClickEvent(T.NamedTuple):
     x: int
     y: int
     bstate: int
     state: int
     clicked: T.Tuple[str, ClickBox]
+
+class SizeType(T.NamedTuple):
+    width: int
+    height: int
