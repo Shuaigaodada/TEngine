@@ -2,6 +2,8 @@ import json
 import typing as T
 import unicurses as curses
 from .Component import Component
+__all__ = ["Renderer"]
+
 
 # 用于绘制颜色色块
 class Renderer(Component):
@@ -20,91 +22,102 @@ class Renderer(Component):
         self.usingColors: T.List[int] = []
         return
     
-    def Create(self, name: str, fg: str, bg: str | int = "#000000") -> None:
+    def create(self, name: str, fg: str, bg: str | int = "#000000") -> None:
         """创建颜色渲染"""
         # 使用PushToCache来获取颜色的index
-        fgColor = self.PushToCache(fg)
-        bgColor = self.PushToCache(bg)
+        fgColor = self.pushCache(fg)
+        bgColor = self.pushCache(bg)
         
         # 判断条件 and 是否记录等级 and 是否有日志记录器
         if name in self.pairs and self.warning and self.logger is not None:
-            self.logger.Warning(f"Color pair '{name}' already exists, will be overwritten.")
+            self.logger.warning(f"Color pair '{name}' already exists, will be overwritten.")
         
         self.pairs[name] = self.index
         curses.init_pair(self.index, fgColor, bgColor)
         self.index += 1
         return
     
-    def LoadCache(self, cache: T.Dict[str, int]) -> None:
+    def loadCache(self, cache: T.Dict[str, int]) -> None:
         """加载缓存"""
         self.cacheColor = cache
         return
-    def LoadCacheFile(self, path: str) -> None:
+    def loadCacheFile(self, path: str) -> None:
         """从文件加载缓存"""
         with open(path, "r") as f:
             self.cacheColor = json.load(f)
         return
-    def LoadPairs(self, pairs: T.Dict[str, int]) -> None:
+    def loadPairs(self, pairs: T.Dict[str, int]) -> None:
         """加载颜色对"""
         self.pairs = pairs
         return
-    def LoadPairsFile(self, path: str) -> None:
+    def loadPairsFile(self, path: str) -> None:
         """从文件加载颜色对"""
         with open(path, "r") as f:
             self.pairs = json.load(f)
         return
-    def SaveCache(self, path: str) -> None:
+    def saveCache(self, path: str) -> None:
         """保存缓存到文件"""
         with open(path, "w") as f:
             json.dump(self.cacheColor, f, indent=4)
         return
-    def SavePairs(self, path: str) -> None:
+    def savePairs(self, path: str) -> None:
         """保存颜色对到文件"""
         with open(path, "w") as f:
             json.dump(self.pairs, f, indent=4)
         return
     
-    def OnColor(self, name: str) -> int:
+    def start(self, name: str | int) -> str | None:
         """启用颜色"""
-        index = self.GetIndex(name)
-        if index == "N/A":
-            return "N/A"
-        pair = curses.COLOR_PAIR(index)
+        if isinstance(name, str):
+            index = self.getIndex(name)
+            if index == "N/A":
+                return "N/A"
+            pair = curses.COLOR_PAIR(index)
+        else:
+            pair = name
+            
         self.usingColors.append(pair)
-        curses.wattron(self.stdscr, pair)
+        self.stdscr.attron( pair )
         return
-    def OffColor(self, name: str | None = None) -> int:
+    
+    def end(self, name: str | None = None) -> int:
         if name is None:
             pair = self.usingColors[0]
             for color in self.usingColors[1:]:
                 pair |= color
-            curses.wattroff(self.stdscr, pair)
+            self.stdscr.attroff( pair )
             return
         else:
-            index = self.GetIndex(name)
+            index = self.getIndex(name)
             if index == "N/A":
                 return "N/A"
             pair = curses.COLOR_PAIR(index)
-            curses.wattroff(self.stdscr, pair)
+            self.stdscr.attroff( pair )
             return
     
-    def GetIndex(self, name: str) -> int:
+    def getIndex(self, name: str) -> int:
         """获取颜色对的index"""
         index = self.pairs.get(name, "N/A")
         if index == "N/A" and self.error and self.logger is not None:
-            self.logger.Error(f"Color pair '{name}' not found.")
+            self.logger.error(f"Color pair '{name}' not found.")
         return index
 
-    def GetByIndex(self, index: int) -> int:
+    def getColor(self, name: str) -> int:
+        return curses.COLOR_PAIR(self.getIndex(name))
+
+    def getByIndex(self, index: int) -> int:
         """使用index获取颜色对"""
         keys = list(self.pairs.keys())
         key = keys[index]
         index = self.pairs.get(key, "N/A")
         if index == "N/A" and self.error and self.logger is not None:
-            self.logger.Error(f"Color pair '{key}' not found.")
+            self.logger.error(f"Color pair '{key}' not found.")
         return index
+    
+    def getColorByIndex(self, index: int) -> int:
+        return curses.COLOR_PAIR(self.getByIndex(index))
         
-    def PushToCache(self, name: str) -> int:
+    def pushCache(self, name: str) -> int:
         """将颜色推入缓存，如果存在返回颜色的index，否则创建颜色并返回index"""
         # 如果颜色已经在缓存中，直接返回index
         if name in self.cacheColor:

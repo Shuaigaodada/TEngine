@@ -3,8 +3,8 @@ __all__ = ["TEngine"]
 
 import sys
 import atexit
+import curses
 import typing as T
-import unicurses as curses
 from .Input import Input
 from .Screen import Screen
 from .Renderer import Renderer
@@ -20,53 +20,59 @@ TEngine应当有几个类实例
 """
 
 class TEngine:
+    instance: "TEngine" = None
     def __init__(self) -> None:
-        self.stdscr  :  int          = None
+        self.stdscr  :  T.Optional[curses.window]   = None
         self.logger  :  DebugLogger  = None if not DebugLogger.instance else DebugLogger.instance[0]
+        
         self.renderer:  Renderer     = Renderer    (      )
-        self.screen  :  Screen       = Screen      ( None )
-        self.input   :  Input        = Input       ( None )
+        self.screen  :  Screen       = Screen      (      )
+        self.input   :  Input        = Input       (      )
+        
+        TEngine.instance             = self
         return
     
-    def SetLogger(self, logger: DebugLogger) -> None:
+    def setLogger(self, logger: DebugLogger) -> None:
         """设置日志记录器"""
         self.logger                 = logger    # self      logger
-        self.renderer.SetLogger     ( logger )  # renderer  logger
-        self.screen.SetLogger       ( logger )  # screen    logger
-        self.input.SetLogger        ( logger )  # input     logger
-        self.input.mouse.SetLogger  ( logger )  # mouse     logger
+        self.renderer.setLogger     ( logger )  # renderer  logger
+        self.screen.setLogger       ( logger )  # screen    logger
+        self.input.setLogger        ( logger )  # input     logger
+        self.input.mouse.setLogger  ( logger )  # mouse     logger
         return
     
-    def SetScreen(self, stdscr: int) -> None:
+    def SetScreen(self, stdscr: curses.window) -> None:
         """设置新的屏幕为绘制屏幕"""
         self.stdscr                 = stdscr    # self      stdscr
-        self.renderer.SetScreen     ( stdscr )  # renderer  stdscr
-        self.screen.SetScreen       ( stdscr )  # screen    stdscr
-        self.input.SetScreen        ( stdscr )  # input     stdscr
-        self.input.mouse.SetScreen  ( stdscr )  # mouse     stdscr
+        self.renderer.setScreen     ( stdscr )  # renderer  stdscr
+        self.screen.setScreen       ( stdscr )  # screen    stdscr
+        self.input.setScreen        ( stdscr )  # input     stdscr
+        self.input.mouse.setScreen  ( stdscr )  # mouse     stdscr
         return 
     
-    def Init(self, registerExit: bool = True) -> None:
+    def init(self, registerExit: bool = True) -> None:
         """
         初始化引擎, 进入cbreak和noecho模式, 设置光标不可见, 初始化颜色。
         
         参数:
             registExit: bool = True, 是否注册退出事件
         """
-        curses.         initscr()                   # init screen
-        curses.         cbreak()                    # start cbreak mode
-        curses.         noecho()                    # start noecho mode
-        curses.         curs_set(0)                 # hide cursor
-        curses.         start_color()               # start color mode
-        self.           SetScreen(curses.stdscr)    # set stdscr
-        self.input.     InitKeys()                  # init keys
-        curses.         keypad(self.stdscr, True)   # enable keypad
+        self.stdscr = \
+        curses.         initscr             (               )           # init screen
+        curses.         cbreak              (               )           # start cbreak mode
+        curses.         noecho              (               )           # start noecho mode
+        curses.         curs_set            (       0       )           # hide cursor
+        curses.         start_color         (               )           # start color mode
+        self.           SetScreen           (  self.stdscr  )           # set stdscr
+        self.input.     init                (               )           # init keys
+        self.stdscr.    keypad              (      True     )           # enable keypad
         if registerExit:
             # 注册退出事件
-            atexit.     register(self.Exit)         # register exit event
+            atexit.     register            (   self.exit   )           # register exit event
+            
         return
         
-    def Exit(self) -> None:
+    def exit(self) -> None:
         """
         卸载引擎, 退出cbreak和noecho模式, 显示光标。
         """
@@ -81,20 +87,10 @@ class TEngine:
         # 关闭日志并且判断是否有异常并输出
         if self.logger is not None:
             if excType is not None:
-                self.logger.Error("An error occurred:", excType, excValue, excTraceback)
+                self.logger.error("An error occurred:", excType, excValue, excTraceback)
             else:
-                self.logger.Info("Exited successfully.")
-            self.logger.Close()
-        return
-    
-    def NoDelayMode(self, mode: bool) -> None:
-        """
-        设置是否阻塞输入。
-        
-        参数:
-            mode: bool, 是否阻塞输入
-        """
-        curses.nodelay(self.stdscr, mode)
+                self.logger.info("Exited successfully.")
+            self.logger.close()
         return
     
 

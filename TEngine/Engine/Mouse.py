@@ -1,9 +1,10 @@
 import typing as T
 import unicurses as curses
-from .Component import Component
+from .Component import Component, Text
 from .clickBox import ClickBox
 from ..dataTypes import ClickStatus, MouseClickEvent
 
+__all__ = ["Mouse", "ClickData"]   
 
 class ClickData:
     def __init__(self, mouseClickEvent: MouseClickEvent) -> None:
@@ -64,16 +65,24 @@ class Mouse(Component):
         self.clickBox: T.Dict[str, ClickBox] = {}
         return
     
-    def Init(self, interval: int = 50) -> None:
+    def init(self, interval: int = 50) -> None:
         curses.mousemask(curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
         curses.mouseinterval(interval)
     
-    def SetClickBox(self, name: str, x: int, y: int, w: int | str, h: int = None) -> None:
+    def set_clickBox(self, name: str, x: int | Text, y: int = None, w: int | str = None, h: int = None) -> None:
         """设置点击区域"""
-        self.clickBox[name] = ClickBox(x, y, w, h)
+        if isinstance(x, Text):
+            text = x
+            self.clickBox[name] = ClickBox( *text.click_box )
+        else:
+            h = h if h is not None else 1
+            if y is None or w is None:
+                self.logger.error("Invalid click box")
+                return
+            self.clickBox[name] = ClickBox(x, y, w, h)
         return
     
-    def CheckClick(self, mouseEvent: MouseClickEvent) -> MouseClickEvent:
+    def checkClick(self, mouseEvent: MouseClickEvent) -> MouseClickEvent:
         """检查点击事件是否在点击区域内，内部调用"""
         clickedBox: T.List[T.Tuple[str, ClickBox]] = []
         for name, box in self.clickBox.items():
@@ -89,7 +98,7 @@ class Mouse(Component):
         mouseEvent = MouseClickEvent(mouseEvent.x, mouseEvent.y, mouseEvent.bstate, mouseEvent.state, clickedBox)
         return mouseEvent
     
-    def GetMouse(self) -> ClickData:
+    def get(self) -> ClickData:
         """获取鼠标点击， 返回对象，包含点击位置，点击状态，点击区域名称"""
         _, mx, my, _, bstate = curses.getmouse()
         state = ClickStatus.UNKNOWN
@@ -107,6 +116,6 @@ class Mouse(Component):
         elif bstate & ClickStatus.MIDDLE_DOUBLE_CLICK:   state = ClickStatus.MIDDLE_DOUBLE_CLICK
         elif bstate & ClickStatus.MIDDLE_TRIPLE_CLICK:   state = ClickStatus.MIDDLE_TRIPLE_CLICK
         
-        mouseClickEvent = self.CheckClick(MouseClickEvent(mx, my, bstate, state, None))
+        mouseClickEvent = self.checkClick(MouseClickEvent(mx, my, bstate, state, None))
         return ClickData(mouseClickEvent)
         
