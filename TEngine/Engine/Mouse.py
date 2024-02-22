@@ -1,3 +1,4 @@
+import curses
 import typing as T
 from .Component import Component, Text
 from .clickBox import ClickBox
