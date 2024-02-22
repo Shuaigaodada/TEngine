@@ -1,21 +1,20 @@
+import curses
 from .Mouse import Mouse
-import unicurses as curses
 from .Component import Component
-
+__all__ = ["Input"]
 
 class Input(Component):
-    def __init__(self, stdscr: int) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.stdscr: int = stdscr
-        self.logKeys: bool = False
-        self.mouse: Mouse = Mouse()
+        self.logKeys    : bool              = False
+        self.mouse      : Mouse             = Mouse()
         return
     
-    def KeyDown(self) -> int:
+    def get(self) -> int:
         """获取输入"""
-        key = curses.wgetch(self.stdscr)
+        key = self.stdscr.getch()
         if self.logger and self.logKeys:
-            self.logger.Info(f"Input: {key}")
+            self.logger.info(f"Input: {key}")
         return key
 
     A = ord("a")
@@ -48,7 +47,7 @@ class Input(Component):
     ENTER = ord("\n")
     ESC = 27
     
-    def InitKeys(self) -> None:
+    def init(self) -> None:
         """初始化按键"""
         setattr(self, "UP", curses.KEY_UP)
         setattr(self, "DOWN", curses.KEY_DOWN)
