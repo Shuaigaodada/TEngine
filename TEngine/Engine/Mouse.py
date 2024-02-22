@@ -1,5 +1,4 @@
 import typing as T
-import unicurses as curses
 from .Component import Component, Text
 from .clickBox import ClickBox
 from ..dataTypes import ClickStatus, MouseClickEvent
