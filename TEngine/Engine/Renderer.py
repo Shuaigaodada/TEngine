@@ -1,6 +1,6 @@
 import json
+import curses
 import typing as T
-import unicurses as curses
 from .Component import Component
 __all__ = ["Renderer"]
 
@@ -72,7 +72,7 @@ class Renderer(Component):
             index = self.getIndex(name)
             if index == "N/A":
                 return "N/A"
-            pair = curses.COLOR_PAIR(index)
+            pair = curses.color_pair(index)
         else:
             pair = name
             
@@ -91,7 +91,7 @@ class Renderer(Component):
             index = self.getIndex(name)
             if index == "N/A":
                 return "N/A"
-            pair = curses.COLOR_PAIR(index)
+            pair = curses.color_pair(index)
             self.stdscr.attroff( pair )
             return
     
@@ -103,7 +103,7 @@ class Renderer(Component):
         return index
 
     def getColor(self, name: str) -> int:
-        return curses.COLOR_PAIR(self.getIndex(name))
+        return curses.color_pair(self.getIndex(name))
 
     def getByIndex(self, index: int) -> int:
         """使用index获取颜色对"""
@@ -115,7 +115,7 @@ class Renderer(Component):
         return index
     
     def getColorByIndex(self, index: int) -> int:
-        return curses.COLOR_PAIR(self.getByIndex(index))
+        return curses.color_pair(self.getByIndex(index))
         
     def pushCache(self, name: str) -> int:
         """将颜色推入缓存，如果存在返回颜色的index，否则创建颜色并返回index"""

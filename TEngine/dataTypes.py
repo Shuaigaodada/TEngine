@@ -1,5 +1,5 @@
 import typing as T
-import unicurses as curses
+import curses
 from .Engine.clickBox import ClickBox
 
 class ClickStatus:
