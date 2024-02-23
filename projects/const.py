@@ -1,9 +1,7 @@
+import env
 import typing as T
 from player import *
-Star = "★"
-OneStar = "★"
-TwoStar = "★★"
-ThreeStar = "★★★"
+star = "★"
 
 currentPlayerPile = "当前牌库: "
 currentPlayerCards = "当前拥有角色: "
@@ -21,5 +19,5 @@ getAwardTip = " - 你有奖励未领取，按g领取奖励"
 
 file_prob = "roleProbs.json"
 file_role = "rolesInfo.data"
-file_count = "cardCounts.count"
+file_count = "cardCount.count"
 file_levelexp = "upgradeExp.json"

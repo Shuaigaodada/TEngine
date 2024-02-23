@@ -1,5 +1,6 @@
 import curses
 import typing as T
+from .. import dataTypes
 import unicodedata as ucd
 from .fileLogger import DebugLogger
 __all__ = ["Component"]
@@ -65,12 +66,12 @@ class Text:
         return
     
     @property
-    def click_box( self ) -> T.Tuple[int, int, int, int]:
-        return ( self.__x, self.__y, self.__x + self.__len - 1, self.__y)
+    def click_box( self ) -> dataTypes.BoxSize:
+        return dataTypes.BoxSize( self.__x, self.__y, self.__x + self.__len - 1, self.__y)
     
     def set_clickBox( self, name: str ) -> None:
         from .TEngine import TEngine
-        TEngine.instance.input.mouse.set_clickBox( name, self )
+        TEngine.instance.input.mouse.set_clickbox( name, self )
         return self
     
     def __str__(self) -> str:

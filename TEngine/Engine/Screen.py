@@ -13,13 +13,16 @@ class Screen(Component):
         return
     
     @property
-    def size(self) -> dataTypes.SizeType:
-        return dataTypes.SizeType( *list( p - 1 for p in self.stdscr.getmaxyx( ) )[::-1] )
+    def size(self) -> dataTypes.ScreenSize:
+        """ 获取屏幕大小 """
+        return dataTypes.ScreenSize( *list( p - 1 for p in self.stdscr.getmaxyx( ) )[::-1] )
     @property
     def width(self) -> int:
+        """ 获取屏幕宽度 """
         return self.size.width
     @property
     def height(self) -> int:
+        """ 获取屏幕高度 """
         return self.size.height
 
     def write(self, string: str | Text, x: int = -1, y: int = -1, color: T.Tuple[int] | int | str = -1) -> Text:
@@ -66,6 +69,7 @@ class Screen(Component):
             # 启用颜色
             if colorAttrs != -1:
                 self.stdscr.attron(colorAttrs)
+            string.set_position( x, y )
             # 字符绘制，如果超出屏幕范围，抛出异常
             try:
                 self.stdscr.move( y, x )
@@ -74,8 +78,7 @@ class Screen(Component):
                 if self.logger is not None:
                     # 打印或记录错误信息
                     self.logger.error(e.__str__())
-                else:
-                    string.set_position( x, y )
+                    
                     
             # 关闭颜色
             if colorAttrs != -1:

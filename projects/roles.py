@@ -39,7 +39,7 @@ class Role:
     
     @property
     def sell_price(self) -> int:
-        return self.cost * ( 3 ** self.level - 1 )
+        return self.cost * ( 3 ** ( self.level - 1 ) )
     @property
     def sell_count(self) -> T.List["Role"]:
         return [ type( self )() ] * ( 3 ** self.level - 1 )

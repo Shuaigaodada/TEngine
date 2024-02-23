@@ -1,60 +1,86 @@
 import curses
 import typing as T
 from .Component import Component, Text
-from .clickBox import ClickBox
-from ..dataTypes import ClickStatus, MouseClickEvent
+from ..dataTypes import ClickStatus, RawClickData, ClickBox
 
-__all__ = ["Mouse", "ClickData"]   
+__all__ = ["Mouse", "ClickData"]
 
+class ClickInfoList:
+    def __init__( self ) -> None:
+        self.names: T.List[str] = []
+        self.boxs: T.List[ClickBox] = []
+        self.boxDict: T.Dict[str, ClickBox] = {}
+    
+    def add( self, click_data: T.List[ T.Tuple[str, ClickBox] ] ) -> None:
+        for name, box in click_data:
+            self.names.append(name)
+            self.boxs.append(box)
+            self.boxDict[name] = box
+        return
+
+    def __contains__(self, name: str) -> bool:
+        return name in self.names
+    def __add__( self, other: "ClickInfoList" ) -> "ClickInfoList":
+        self.names.extend( other.names )
+        self.boxs.extend( other.boxs )
+        self.boxDict.update( other.boxDict )
+        return self
+    def __iter__( self ) -> T.Iterator[ str ]:
+        return self.names.__iter__()
+    
 class ClickData:
-    def __init__(self, mouseClickEvent: MouseClickEvent) -> None:
-        self.info: MouseClickEvent  = mouseClickEvent
-        self.pressed                : T.List[str]=[]
-        self.clicked                : T.List[str]=[]
-        self.released               : T.List[str]=[]
-        self.doubleClicked          : T.List[str]=[]
-        self.tripleClicked          : T.List[str]=[]
-        self.rightPressed           : T.List[str]=[]
-        self.rightClicked           : T.List[str]=[]
-        self.rightDoubleClicked     : T.List[str]=[]
-        self.rightTripleClicked     : T.List[str]=[]
-        self.middlePressed          : T.List[str]=[]
-        self.middleClicked          : T.List[str]=[]
-        self.middleDoubleClicked    : T.List[str]=[]
-        self.middleTripleClicked    : T.List[str]=[]
-        self.unknown                : T.List[str]=[]
+    def __init__(self, mouseClickEvent: RawClickData) -> None:
+        self.x = mouseClickEvent.x
+        self.y = mouseClickEvent.y
+        self.bstate = mouseClickEvent.bstate
+        self.clicked_data = mouseClickEvent.clicked
+        
+        self.pressed                : ClickInfoList = ClickInfoList( )
+        self.clicked                : ClickInfoList = ClickInfoList( )
+        self.released               : ClickInfoList = ClickInfoList( )
+        self.doubleClicked          : ClickInfoList = ClickInfoList( )
+        self.tripleClicked          : ClickInfoList = ClickInfoList( )
+        self.rightPressed           : ClickInfoList = ClickInfoList( )
+        self.rightClicked           : ClickInfoList = ClickInfoList( )
+        self.rightDoubleClicked     : ClickInfoList = ClickInfoList( )
+        self.rightTripleClicked     : ClickInfoList = ClickInfoList( )
+        self.middlePressed          : ClickInfoList = ClickInfoList( )
+        self.middleClicked          : ClickInfoList = ClickInfoList( )
+        self.middleDoubleClicked    : ClickInfoList = ClickInfoList( )
+        self.middleTripleClicked    : ClickInfoList = ClickInfoList( )
+        self.unknown                : ClickInfoList = ClickInfoList( )
         self.init()
         return
     
     def init(self) -> None:
-        if self.info.state & ClickStatus.PRESSED:
-            self.pressed.extend([name for name, box in self.info.clicked])
-        elif self.info.state & ClickStatus.RELEASED:
-            self.released.extend([name for name, box in self.info.clicked])
-        elif self.info.state & ClickStatus.CLICK:
-            self.clicked.extend([name for name, box in self.info.clicked])
-        elif self.info.state & ClickStatus.DOUBLE_CLICK:
-            self.doubleClicked.extend([name for name, box in self.info.clicked])
-        elif self.info.state & ClickStatus.TRIPLE_CLICK:
-            self.tripleClicked.extend([name for name, box in self.info.clicked])
-        elif self.info.state & ClickStatus.RIGHT_PRESSED:
-            self.rightPressed.extend([name for name, box in self.info.clicked])
-        elif self.info.state & ClickStatus.RIGHT_CLICK:
-            self.rightClicked.extend([name for name, box in self.info.clicked])
-        elif self.info.state & ClickStatus.RIGHT_DOUBLE_CLICK:
-            self.rightDoubleClicked.extend([name for name, box in self.info.clicked])
-        elif self.info.state & ClickStatus.RIGHT_TRIPLE_CLICK:
-            self.rightTripleClicked.extend([name for name, box in self.info.clicked])
-        elif self.info.state & ClickStatus.MIDDLE_PRESSED:
-            self.middlePressed.extend([name for name, box in self.info.clicked])
-        elif self.info.state & ClickStatus.MIDDLE_CLICK:
-            self.middleClicked.extend([name for name, box in self.info.clicked])
-        elif self.info.state & ClickStatus.MIDDLE_DOUBLE_CLICK:
-            self.middleDoubleClicked.extend([name for name, box in self.info.clicked])
-        elif self.info.state & ClickStatus.MIDDLE_TRIPLE_CLICK:
-            self.middleTripleClicked.extend([name for name, box in self.info.clicked])
+        if self.bstate & ClickStatus.PRESSED:
+            self.pressed.add( self.clicked_data )
+        elif self.bstate & ClickStatus.RELEASED:
+            self.released.add( self.clicked_data )
+        elif self.bstate & ClickStatus.CLICK:
+            self.clicked.add( self.clicked_data )
+        elif self.bstate & ClickStatus.DOUBLE_CLICK:
+            self.doubleClicked.add( self.clicked_data )
+        elif self.bstate & ClickStatus.TRIPLE_CLICK:
+            self.tripleClicked.add( self.clicked_data )
+        elif self.bstate & ClickStatus.RIGHT_PRESSED:
+            self.rightPressed.add( self.clicked_data )
+        elif self.bstate & ClickStatus.RIGHT_CLICK:
+            self.rightClicked.add( self.clicked_data )
+        elif self.bstate & ClickStatus.RIGHT_DOUBLE_CLICK:
+            self.rightDoubleClicked.add( self.clicked_data )
+        elif self.bstate & ClickStatus.RIGHT_TRIPLE_CLICK:
+            self.rightTripleClicked.add( self.clicked_data )
+        elif self.bstate & ClickStatus.MIDDLE_PRESSED:
+            self.middlePressed.add( self.clicked_data )
+        elif self.bstate & ClickStatus.MIDDLE_CLICK:
+            self.middleClicked.add( self.clicked_data )
+        elif self.bstate & ClickStatus.MIDDLE_DOUBLE_CLICK:
+            self.middleDoubleClicked.add( self.clicked_data )
+        elif self.bstate & ClickStatus.MIDDLE_TRIPLE_CLICK:
+            self.middleTripleClicked.add( self.clicked_data )
         else:
-            self.unknown.extend([name for name, box in self.info.clicked])
+            self.unknown.add( self.clicked_data )
         return
         
         
@@ -69,11 +95,17 @@ class Mouse(Component):
         curses.mousemask(curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
         curses.mouseinterval(interval)
     
-    def set_clickBox(self, name: str, x: int | Text, y: int = None, w: int | str = None, h: int = None) -> None:
+    def clear_clickbox( self ) -> None:
+        self.clickBox.clear()
+    def remove_clickbox( self, name: str ) -> None:
+        self.clickBox.pop( name )
+    
+    def set_clickbox(self, name: str, x: int | Text, y: int = None, w: int | str = None, h: int = None) -> None:
         """设置点击区域"""
         if isinstance(x, Text):
             text = x
-            self.clickBox[name] = ClickBox( *text.click_box )
+            box = text.click_box
+            self.clickBox[name] = ClickBox( box.x, box.y, box.width, box.height)
         else:
             h = h if h is not None else 1
             if y is None or w is None:
@@ -82,40 +114,19 @@ class Mouse(Component):
             self.clickBox[name] = ClickBox(x, y, w, h)
         return
     
-    def checkClick(self, mouseEvent: MouseClickEvent) -> MouseClickEvent:
+    def checkClick(self, x: int, y: int, bstate: int) -> RawClickData:
         """检查点击事件是否在点击区域内，内部调用"""
-        clickedBox: T.List[T.Tuple[str, ClickBox]] = []
-        for name, box in self.clickBox.items():
-            if box.offset:
-                clickedX, clickedY = mouseEvent.x, mouseEvent.y
-                for bx, by in box.clickBox:
-                    if bx == clickedX and by == clickedY:
-                        clickedBox.append((name, box))
-                        break
-            else:
-                if box.box[0] <= mouseEvent.x <= box.box[2] and box.box[1] <= mouseEvent.y <= box.box[3]:
-                    clickedBox.append((name, box))
-        mouseEvent = MouseClickEvent(mouseEvent.x, mouseEvent.y, mouseEvent.bstate, mouseEvent.state, clickedBox)
-        return mouseEvent
+        clickedBox: T.List[ T.Tuple[ str, ClickBox ] ] = [ ]
+        for name, box in self.clickBox.items( ):
+            if box.checkbox( ( x, y, bstate ) ):
+                clickedBox.append((name, box))
+                
+        return RawClickData( x, y, bstate, clickedBox )
     
     def get(self) -> ClickData:
         """获取鼠标点击， 返回对象，包含点击位置，点击状态，点击区域名称"""
         _, mx, my, _, bstate = curses.getmouse()
-        state = ClickStatus.UNKNOWN
-        if   bstate & ClickStatus.PRESSED:               state = ClickStatus.PRESSED
-        elif bstate & ClickStatus.RELEASED:              state = ClickStatus.RELEASED
-        elif bstate & ClickStatus.CLICK:                 state = ClickStatus.CLICK
-        elif bstate & ClickStatus.DOUBLE_CLICK:          state = ClickStatus.DOUBLE_CLICK
-        elif bstate & ClickStatus.TRIPLE_CLICK:          state = ClickStatus.TRIPLE_CLICK
-        elif bstate & ClickStatus.RIGHT_PRESSED:         state = ClickStatus.RIGHT_PRESSED
-        elif bstate & ClickStatus.RIGHT_CLICK:           state = ClickStatus.RIGHT_CLICK
-        elif bstate & ClickStatus.RIGHT_DOUBLE_CLICK:    state = ClickStatus.RIGHT_DOUBLE_CLICK
-        elif bstate & ClickStatus.RIGHT_TRIPLE_CLICK:    state = ClickStatus.RIGHT_TRIPLE_CLICK
-        elif bstate & ClickStatus.MIDDLE_PRESSED:        state = ClickStatus.MIDDLE_PRESSED
-        elif bstate & ClickStatus.MIDDLE_CLICK:          state = ClickStatus.MIDDLE_CLICK
-        elif bstate & ClickStatus.MIDDLE_DOUBLE_CLICK:   state = ClickStatus.MIDDLE_DOUBLE_CLICK
-        elif bstate & ClickStatus.MIDDLE_TRIPLE_CLICK:   state = ClickStatus.MIDDLE_TRIPLE_CLICK
-        
-        mouseClickEvent = self.checkClick(MouseClickEvent(mx, my, bstate, state, None))
-        return ClickData(mouseClickEvent)
+
+        mouse = self.checkClick(mx, my, bstate)
+        return ClickData( mouse )
         

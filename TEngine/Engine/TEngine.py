@@ -4,7 +4,9 @@ __all__ = ["TEngine"]
 import sys
 import atexit
 import curses
+import traceback
 import typing as T
+from .. import dataTypes
 from .Input import Input
 from .Screen import Screen
 from .Renderer import Renderer
@@ -50,7 +52,7 @@ class TEngine:
         self.input.mouse.setScreen  ( stdscr )  # mouse     stdscr
         return 
     
-    def init(self, registerExit: bool = True) -> None:
+    def _init(self, registerExit: bool = True) -> None:
         """
         初始化引擎, 进入cbreak和noecho模式, 设置光标不可见, 初始化颜色。
         
@@ -81,19 +83,37 @@ class TEngine:
         curses.echo()
         curses.endwin()
         
-        # 获取异常信息
-        excType, excValue, excTraceback = sys.exc_info()
+        try:
+            exc_type, exc_value, exc_traceback = sys.last_type, sys.last_value, sys.last_traceback
+        except AttributeError:
+            exc_type, exc_value, exc_traceback = None, None, None
         
         # 关闭日志并且判断是否有异常并输出
         if self.logger is not None:
-            if excType is not None:
-                self.logger.error("An error occurred:", excType, excValue, excTraceback)
+            if DebugLogger.exceptions:
+                for exception in DebugLogger.exceptions:
+                    exception_string = traceback.format_exception(exception.type, exception.value, exception.traceback)
+                    self.logger.error( ''.join( exception_string ) )
+            elif exc_type is not None:
+                self.logger.error( ''.join( traceback.format_exception( exc_type, exc_value, exc_traceback ) ) )
             else:
                 self.logger.info("Exited successfully.")
             self.logger.close()
         return
     
 
-
+    @property
+    def size( self ) -> dataTypes.ScreenSize:
+        """获取屏幕大小"""
+        return self.screen.size
+    @property
+    def width( self ) -> int:
+        """获取屏幕宽度"""
+        return self.screen.width
+    @property
+    def height( self ) -> int:
+        """获取屏幕高度"""
+        return self.screen.height
     
-
+    
+    

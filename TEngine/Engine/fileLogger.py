@@ -1,9 +1,15 @@
 # 这是一个用于debug的日志记录器
 import os
+import sys
 import time
 import typing as T
 
 __all__ = ["DebugLogger"]
+
+class ExceptionInfo:
+    type: T.Type[BaseException]
+    value: BaseException
+    traceback: T.Any
 
 class DebugLogger:
     instance = []
@@ -22,6 +28,9 @@ class DebugLogger:
         self.logFile = logFile
         self.open(self.logFile)
         self.instance.append(self)
+        
+        self.auto_update: bool = False
+        
         return
     
     def update(self) -> None:
@@ -50,10 +59,13 @@ class DebugLogger:
             message (str): 信息
             sep (str): 分隔符
         """
-        
+        messages = map(str, messages)
         message = sep.join(messages)
         
         self.logFileHandler.write(f'[{time.strftime("%Y-%m-%d %H:%M:%S")}] INFO: {message}\n')
+        
+        if self.auto_update:
+            self.update( )
         return
     def warning(self, *messages: T.Tuple[str], sep: str = ' ') -> None:
         """记录警告
@@ -62,10 +74,12 @@ class DebugLogger:
             message (str): 信息
             sep (str): 分隔符
         """
-        
+        messages = map(str, messages)
         message = sep.join(messages)
         
         self.logFileHandler.write(f'[{time.strftime("%Y-%m-%d %H:%M:%S")}] WARNING: {message}\n')
+        if self.auto_update:
+            self.update( )
         return
     
     def error(self, *messages: T.Tuple[str], sep: str = ' ') -> None:
@@ -75,10 +89,12 @@ class DebugLogger:
             message (str): 信息
             sep (str): 分隔符
         """
-        
+        messages = map(str, messages)
         message = sep.join(messages)
         
         self.logFileHandler.write(f'[{time.strftime("%Y-%m-%d %H:%M:%S")}] ERROR: {message}\n')
+        if self.auto_update:
+            self.update( )
         return
         
     def clear(self) -> None:
@@ -87,4 +103,10 @@ class DebugLogger:
         self.logFileHandler = open(self.logFile, 'w')
         return
 
+    exceptions: T.List[ExceptionInfo] = []
 
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    DebugLogger.exceptions.append(ExceptionInfo(exc_type, exc_value, exc_traceback))
+    
+sys.excepthook = handle_exception

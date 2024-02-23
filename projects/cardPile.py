@@ -1,3 +1,4 @@
+import env
 import const
 import random
 import typing as T
@@ -46,9 +47,9 @@ class CardPile:
             role = role.strip("\n")
             if role == "": continue
             
-            name, cost = role.split(",")
+            name, cost = role.split(" ")
             cost = int(cost)
-            self.__pile[cost - 1].append([Role.createOfName(name)] * counts[cost - 1])
+            self.__pile[cost - 1].extend([Role.createOfName(name)] * counts[cost - 1])
         return
     
     def drawOnce(self, level: int) -> Role:
@@ -69,7 +70,7 @@ class CardPile:
     
     def push(self, *roles: T.Tuple[Role]) -> None:
         self.stack.push(*roles)
-        for _ in self.stack.size:
+        for _ in range( self.stack.size ):
             role: Role = self.stack.pop()
             self.__pile[role.cost - 1].append(role)
         return

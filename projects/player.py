@@ -1,4 +1,5 @@
 __all__ = ["Player", "AI"]
+import env
 import const
 import typing as T
 from roles import *
@@ -7,7 +8,7 @@ from main import resource
 
 class Player:
     def __init__(self, globalCardPile: CardPile) -> None:
-        self.level          : int               = 1
+        self.level          : int               = 2
         self.exp            : int               = 0
         self.coin           : int               = 0
         self.cards          : T.List[Role]      = list()
@@ -35,6 +36,19 @@ class Player:
         # int level exp keys
         self.levelExp = { int(k): v for k, v in self.levelExp.items() }
         
+        self.__offset_list: T.List[ int ] = [ ]
+        
+    def get_drawpos( self ) -> T.List[ int ]:
+        if self.__offset_list:
+            return self.__offset_list
+        
+        offset = len( const.currentPlayerPile ) + 4 # 4 space
+        space = 2
+        for card in self.cardPile.values( ):            
+            self.__offset_list.append( offset )
+            offset += card.name_lenght + space
+        return self.__offset_list
+        
     def sellCard(self, index: int) -> None:
         """出售卡牌"""
         sell_card = self.cards.pop( index )
@@ -42,6 +56,9 @@ class Player:
         price, count = sell_card.sell_price, sell_card.sell_count
         self.coin += price
         self.globalCardPile.push( *count )
+        
+        
+        
     
     def buyCard(self, index: int, free: bool = False) -> None:
         """购买卡牌"""
@@ -55,10 +72,10 @@ class Player:
             self.cards.append( self.cardPile[ index ] )
             self.cardPile[ index ] = None
     
-    def upgrade( self, free: bool = False, __checkgrade: bool = False ) -> None:
+    def upgrade( self, free: bool = False, __checkgrade: bool = False ) -> bool:
         """升级角色"""
         # max level
-        if self.levelExp[ self.level ] == -1: return
+        if self.levelExp[ self.level ] == -1: return False
         
         if self.exp >= self.levelExp[ self.level ]:
             self.exp -= self.levelExp[ self.level ]
@@ -70,27 +87,42 @@ class Player:
         if free or self.coin >= self.levelUpCost:
             self.coin -= self.levelUpCost
             self.exp += self.levelUpExp
-    
-    def refreshPile( self, free: bool = False ) -> None:
+        self.upgrade( free, True )
+        
+    def refreshPile( self, free: bool = False ) -> bool:
         """刷新卡池"""
         if free or self.coin >= self.refreshCost:
-            self.coin -= self.refreshCost
+            self.coin -= self.refreshCost if not free else 0
+            
+            self.globalCardPile.push( *[ role for role in self.cardPile.values( ) if role is not None ] )
             
             for idx, card in enumerate( self.globalCardPile.draw( self.level ) ):
                 self.cardPile[ idx + 1 ] = card
+            
+            self.__offset_list.clear( )
+            self.get_drawpos( )
+            return True
+        
+        self.__offset_list.clear( )
+        self.get_drawpos( )
+        return False
     
     def synthesisCard( self ) -> None:
         """ 合成卡牌 """
         counter = self.cardCount( )
         
         for card in self.cards:
-            for count in range( 3 * ( counter[ card.name ][ card.level ] // 3 ) ):
-                self.cards.remove( card )
-            
-            if count:
+            count = counter[ card.name ][ card.level ]
+            if count == 3 and card.level <= 3:
+                for _ in range( 3 ):
+                    self.cards.remove( card )
                 new_card = type( card )( )
                 new_card.level = card.level + 1
-                self.cards.extend( [ new_card ] * (count // 3) )
+                self.cards.append( new_card )
+                self.synthesisCard( )
+                break
+        return 
+                
     
     @property
     def interest( self ) -> int:
@@ -113,8 +145,24 @@ class Player:
         """获取卡牌数量"""
         counter: T.Dict[ str, T.Dict[ int, int ] ] = {}
         for card in self.cards:
-            counter[ card.name ] = counter.get( card.name, { card.level: 1 } ).get( card.level, 0 ) + 1
+            counter[ card.name ] = counter.get( card.name, { card.level: 0 } )
+            counter[ card.name ][ card.level ] = counter[ card.name ].get( card.level, 0 ) + 1
         return counter
+    
+    def checkCard( self, other: Role | str ) -> bool:
+        """ 检查卡牌是是否在玩家手牌中 """
+        if isinstance( other, Role ):
+            for card in self.cards:
+                if card.name == other.name and card.level < 3:
+                    return True
+            return False
+        else:
+            for card in self.cards:
+                if card.name == other and card.level < 3:
+                    return True
+            return False
+    
+    
     
     
 class AI(Player):

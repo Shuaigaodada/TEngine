@@ -66,18 +66,20 @@ class Renderer(Component):
             json.dump(self.pairs, f, indent=4)
         return
     
-    def start(self, name: str | int) -> str | None:
+    def start(self, *name: str | int) -> None:
         """启用颜色"""
-        if isinstance(name, str):
-            index = self.getIndex(name)
-            if index == "N/A":
-                return "N/A"
-            pair = curses.color_pair(index)
-        else:
-            pair = name
-            
-        self.usingColors.append(pair)
-        self.stdscr.attron( pair )
+        attr_stack = []
+        for n in name:
+            if isinstance( n, str ):
+                idx = self.getIndex( n )
+                if idx == "N/A": continue
+                attr_stack.append( curses.color_pair( idx ) )
+            else:
+                attr_stack.append( n )
+        
+        for pair in attr_stack:
+            self.usingColors.append(pair)
+            self.stdscr.attron( pair )
         return
     
     def end(self, name: str | None = None) -> int:
@@ -135,3 +137,11 @@ class Renderer(Component):
         G = int(G * 1000 / 255)
         B = int(B * 1000 / 255)
         return R, G, B
+    
+    BOLD = curses.A_BOLD
+    DIM = curses.A_DIM
+    REVERSE = curses.A_REVERSE
+    BLINK = curses.A_BLINK
+    UNDERLINE = curses.A_UNDERLINE
+    STANDOUT = curses.A_STANDOUT
+    NORMAL = curses.A_NORMAL
