@@ -69,9 +69,15 @@ class Text:
     def click_box( self ) -> dataTypes.BoxSize:
         return dataTypes.BoxSize( self.__x, self.__y, self.__x + self.__len - 1, self.__y)
     
-    def set_clickBox( self, name: str ) -> None:
+    def set_clickbox( self, name: str, call: T.Callable = None, *args, **kwargs ) -> None:
         from .TEngine import TEngine
-        TEngine.instance.input.mouse.set_clickbox( name, self )
+        noneArgs = (None, None, None)
+        TEngine.instance.input.mouse.set_clickbox( name, self, *noneArgs, call, *args, **kwargs )
+        return self
+
+    def merge_clickbox( self, name: str ) -> None:
+        from .TEngine import TEngine
+        TEngine.instance.input.mouse.merge_clickbox( name, self )
         return self
     
     def __str__(self) -> str:

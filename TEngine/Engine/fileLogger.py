@@ -33,13 +33,31 @@ class DebugLogger:
         
         return
     
+    def read( self ) -> str:
+        """读取日志文件"""
+        self.logFileHandler.close()
+        self.logFileHandler = open(self.logFile, "r")
+        text = self.logFileHandler.read()
+        self.logFileHandler.close()
+        self.logFileHandler = open(self.logFile, "a")
+        return text
+    def readlines( self ) -> T.List[str]:
+        """读取日志文件"""
+        self.logFileHandler.close()
+        self.logFileHandler = open(self.logFile, "r")
+        text = self.logFileHandler.readlines()
+        self.logFileHandler.close()
+        self.logFileHandler = open(self.logFile, "a")
+        return text
+        
+    
     def update(self) -> None:
         """更新日志记录器"""
         self.close()
         self.open(self.logFile, "a")
         return
     
-    def open(self, filePath: str, mode = "w") -> None:
+    def open(self, filePath: str, mode = "a") -> None:
         """打开日志文件"""
         self.logFile = filePath
         self.logFileHandler = open(self.logFile, mode)

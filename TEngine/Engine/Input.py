@@ -8,6 +8,7 @@ class Input(Component):
         super().__init__()
         self.logKeys    : bool              = False
         self.mouse      : Mouse             = Mouse()
+        self.__is_delay : bool              = False
         return
     
     def get(self) -> int:
@@ -16,6 +17,14 @@ class Input(Component):
         if self.logger and self.logKeys:
             self.logger.info(f"Input: {key}")
         return key
+
+    @property
+    def delay( self ) -> bool:
+        return self.__is_delay
+    @delay.setter
+    def delay( self, delay: bool ) -> None:
+        self.__is_delay = delay
+        self.stdscr.nodelay( not delay )
 
     A = ord("a")
     B = ord("b")

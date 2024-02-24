@@ -82,6 +82,7 @@ class TEngine:
         curses.nocbreak()
         curses.echo()
         curses.endwin()
+        print("\033[?1003l")
         
         try:
             exc_type, exc_value, exc_traceback = sys.last_type, sys.last_value, sys.last_traceback

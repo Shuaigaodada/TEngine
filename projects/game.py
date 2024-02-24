@@ -39,7 +39,8 @@ class Game( TEngine ):
 
         self.uiString                         =  lambda : [
             const.refreshCard, const.upgradeCard,
-            "当前经验: "    + str( self.client.exp ) + "/" + str( self.client.levelExp[ self.client.level ] ) + \
+            "当前经验: "    + str( self.client.exp if self.client.levelExp[ self.client.level ] != -1 else "max" ) \
+                + "/" + str( self.client.levelExp[ self.client.level ] if self.client.levelExp[ self.client.level ] != -1 else "max" )  + \
             ", 当前等级: "  + str( self.client.level ),
             "当前金币: "    + str( self.client.coin ),
             "战力: 0",
@@ -63,6 +64,8 @@ class Game( TEngine ):
         self.renderer.create( "star-3", "#E2C258" )
     
     def start( self ) -> None:
+        self.logger.clear( )
+        
         for player in self.players:
             player.refreshPile( True )
             
@@ -145,9 +148,14 @@ class Game( TEngine ):
             else:
                 self.renderer.start( "cost-" + str( card.cost ) )
             
-            self.screen.write( card.name, drawpos[ idx - 1 ], self.height ).set_clickBox( "role-" + str( idx ) )
+            text = \
+            self.screen.write( card.name, drawpos[ idx - 1 ], self.height )
+            x, y, w, h = text.click_box.unpack( )
+            self.input.mouse.set_clickbox( "role-" + str( idx ), x, y, w, h )
             
             self.renderer.end( )
+        
+        
             
     def draw_clientCards( self ) -> None:
         self.screen.write( const.currentPlayerCards, 3, 0 )
@@ -212,7 +220,7 @@ class Game( TEngine ):
                         
                     self.renderer.start( "star-" + str( level ) )
                     
-                    for pos in star_pos:
+                    for idx, pos in enumerate(star_pos):
                         position = drawpos[ pos ] + len( card_name ) - (level - 1)
                         self.screen.write( const.star * level, position, self.height - 1 )
                     

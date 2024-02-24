@@ -1,7 +1,9 @@
 import env
+import re
+import curses
 from TEngine import TEngine
 from TEngine import DebugLogger
-from TEngine.Characters import Characters
+from TEngine.dataTypes import ClickStatus
 from TEngine.Engine.Component import Text
 
 
@@ -11,29 +13,37 @@ class Test(TEngine):
         return
     
     def main(self) -> None:
-        self.init( True )
+        self._init( True )
         
         logger = DebugLogger( "logs/test.log" )
         self.setLogger(logger)
         
-        self.input.mouse.init()
+        self.logger.clear( )
         
-        self.renderer.create("green", "#00FF00", "#000000")
+        self.input.mouse.init( 0, True )
         
-        self.screen.clear()
-        self.screen.write("Hello World", color="green").set_clickBox( "test" )
-        self.screen.write("Other Text")
+        drawing = False
+        running = True
         
-        self.screen.update()
-        while True:
-            key = self.input.get()
+        while running:
+            key = self.input.get( )
+            
             if key == self.input.MOUSE_KEY:
-                mouseEvent = self.input.mouse.get()
-                if "test" in mouseEvent.clicked or "test" in mouseEvent.pressed:
-                    self.logger.info("Click test")
-                    self.logger.update()
-            if key == self.input.Q:
-                break
-        return
-    
+                mouse = self.input.mouse.get( )
+                
+                if mouse.bstate & ClickStatus.PRESSED or mouse.bstate & ClickStatus.CLICKED:
+                    drawing = True
+
+                elif drawing and mouse.bstate & ClickStatus.DRAGING:
+                    self.screen.write( "X", mouse.x, mouse.y )
+                
+                elif mouse.bstate & ClickStatus.RELEASED:
+                    drawing = False
+            
+            elif key == self.input.Q:
+                running = False
+            
+            self.screen.update( )
+        
+        
 Test().main()
