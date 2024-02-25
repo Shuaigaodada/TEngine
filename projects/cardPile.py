@@ -34,9 +34,9 @@ class CardPile:
         self.init()
         
     def init(self) -> None:
-        self.__prob             = resource.load( const.file_prob ).asJson()
-        roles                   = resource.load( const.file_role ).asLines()
-        counts                  = resource.load( const.file_count ).asString()
+        self.__prob             = resource.load( const.file_prob ).asJson   ( encoding = "utf-8" )
+        roles                   = resource.load( const.file_role ).asLines  ( encoding = "utf-8" )
+        counts                  = resource.load( const.file_count ).asString( encoding = "utf-8" )
         
         
         counts = list(map(int, counts.split(",")))
