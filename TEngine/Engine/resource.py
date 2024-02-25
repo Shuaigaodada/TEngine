@@ -12,34 +12,34 @@ class FileLoader(Component):
         self.filePath = filePath
         return
 
-    def asString(self) -> str:
-        with open(self.filePath, "r") as file:
+    def asString(self, *args, **kwargs) -> str:
+        with open(self.filePath, "r", *args, **kwargs) as file:
             return file.read()
     
-    def asFile(self) -> T.IO:
-        return open(self.filePath, "r")
+    def asFile(self, *args, **kwargs) -> T.IO:
+        return open(self.filePath, "r", *args, **kwargs)
     
-    def asLines(self) -> T.List[str]:
-        with open(self.filePath, "r") as file:
+    def asLines(self, *args, **kwargs) -> T.List[str]:
+        with open(self.filePath, "r", *args, **kwargs) as file:
             return file.readlines()
     
-    def asJson(self) -> T.Dict:
-        with open(self.filePath, "r") as file:
+    def asJson(self, *args, **kwargs) -> T.Dict:
+        with open(self.filePath, "r", *args, **kwargs) as file:
             return json.load(file)
     
-    def asObject(self) -> object:
-        with open(self.filePath, "rb") as file:
+    def asObject(self, *args, **kwargs) -> object:
+        with open(self.filePath, "rb", *args, **kwargs) as file:
             return pickle.load(file)
         
-    def write(self, data: str | T.Dict | object) -> None:
+    def write(self, data: str | T.Dict | object, *args, **kwargs) -> None:
         if type(data) is str:
-            with open(self.filePath, "w") as file:
+            with open(self.filePath, "w", *args, **kwargs) as file:
                 file.write(data)
         elif type(data) is dict:
-            with open(self.filePath, "w") as file:
+            with open(self.filePath, "w", *args, **kwargs) as file:
                 json.dump(data, file)
         else:
-            with open(self.filePath, "wb") as file:
+            with open(self.filePath, "wb", *args, **kwargs) as file:
                 pickle.dump(data, file)
         return
 
