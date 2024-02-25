@@ -7,39 +7,40 @@ __all__ = ["Resource", "FileLoader"]
 
 
 class FileLoader(Component):
-    def __init__(self, filePath: str) -> None:
+    def __init__(self, filePath: str, encoding: str = None) -> None:
         super().__init__()
         self.filePath = filePath
+        self.encoding = encoding if encoding is not None else "utf-8"
         return
 
-    def asString(self, *args, **kwargs) -> str:
-        with open(self.filePath, "r", *args, **kwargs) as file:
+    def asString(self) -> str:
+        with open(self.filePath, "r", encoding=self.encoding) as file:
             return file.read()
     
-    def asFile(self, *args, **kwargs) -> T.IO:
-        return open(self.filePath, "r", *args, **kwargs)
+    def asFile(self) -> T.IO:
+        return open(self.filePath, "r")
     
-    def asLines(self, *args, **kwargs) -> T.List[str]:
-        with open(self.filePath, "r", *args, **kwargs) as file:
+    def asLines(self) -> T.List[str]:
+        with open(self.filePath, "r", encoding=self.encoding) as file:
             return file.readlines()
     
-    def asJson(self, *args, **kwargs) -> T.Dict:
-        with open(self.filePath, "r", *args, **kwargs) as file:
+    def asJson(self) -> T.Dict:
+        with open(self.filePath, "r", encoding=self.encoding) as file:
             return json.load(file)
     
-    def asObject(self, *args, **kwargs) -> object:
-        with open(self.filePath, "rb", *args, **kwargs) as file:
+    def asObject(self) -> object:
+        with open(self.filePath, "rb", encoding=self.encoding) as file:
             return pickle.load(file)
         
-    def write(self, data: str | T.Dict | object, *args, **kwargs) -> None:
+    def write(self, data: str | T.Dict | object) -> None:
         if type(data) is str:
-            with open(self.filePath, "w", *args, **kwargs) as file:
+            with open(self.filePath, "w", encoding=self.encoding) as file:
                 file.write(data)
         elif type(data) is dict:
-            with open(self.filePath, "w", *args, **kwargs) as file:
+            with open(self.filePath, "w", encoding=self.encoding) as file:
                 json.dump(data, file)
         else:
-            with open(self.filePath, "wb", *args, **kwargs) as file:
+            with open(self.filePath, "wb", encoding=self.encoding) as file:
                 pickle.dump(data, file)
         return
 
