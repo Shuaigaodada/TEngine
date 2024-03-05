@@ -20,8 +20,8 @@ class ReturnedData(NamedTuple):
     def as_json( self, encoding: str = "utf-8", *args, **kwargs ) -> Dict[str, Any]:
         return json.loads( self.data.decode( encoding ), *args, **kwargs )
     
-    def decode( self, __encoding: str = "utf-8", __error: str = "strict" ) -> str:
-        return self.data.decode( __encoding, __error )
+    def decode( self, encoding: str = "utf-8", __error: str = "strict" ) -> str:
+        return self.data.decode( encoding, __error )
     
     def as_object( self, *args, **kwargs ) -> Any:
         return pickle.loads( self.data, *args, **kwargs )
@@ -73,6 +73,7 @@ class SocketServer:
         self.__bsize_buffer: Dict[ socket.socket: int ] = { }
         
         self.__binded: bool = False
+        self.set_option( socket.SOL_SOCKET, socket.SO_REUSEADDR, True )
         
     def set_option( self, __level: int, __option: int, __value: bool ) -> None:
         self.socket.setsockopt( __level, __option, __value )
@@ -152,7 +153,7 @@ class SocketServer:
             data = recv( __size, __flags )
             return data
     
-    def recv( self, __count: int = 1, __size: int = -1, __flags: int = 0, __stuck: Optional[Callable] | Optional[str] = "none", callback: Optional[Callable] = None ) -> ReturnedData:
+    def recv( self, __count: int = 1, __size: int = -1, __flags: int = 0, __stuck: Optional[Callable] | Optional[str] = "none", callback: Optional[Callable] = None ) -> List[ReturnedData]:
         """接收数据"""
         datas: List[ ReturnedData ] = [ ]
         self.set_clients_blocking( False )
@@ -166,7 +167,7 @@ class SocketServer:
                         callback( data )
         
         self.set_clients_blocking( True )
-        return data
+        return datas
     
     def send_to( self, __client: socket.socket, __data: bytes, __flags: int = 0 ) -> None:
         """发送数据"""
@@ -354,7 +355,7 @@ if __name__ == "__main__":
         __client.sendall( raw_string )
     
     with SocketServer( ) as server:
-        server.set_option( socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
+        server.set_option( socket.SOL_SOCKET, socket.SO_REUSEADDR, True )
         server.listen( )
         
         Thread( target=connect, args=(client1,) ).start( )
