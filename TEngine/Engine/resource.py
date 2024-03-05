@@ -2,7 +2,7 @@ import os
 import json
 import pickle
 import typing as T
-from .Component import Component
+from .component import Component
 __all__ = ["Resource", "FileLoader"]
 
 

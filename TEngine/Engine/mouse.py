@@ -1,6 +1,6 @@
 import curses
 import typing as T
-from .Component import Component, Text
+from .component import Component, Text
 from ..dataTypes import ClickStatus, RawClickData, ClickBox
 
 __all__ = ["Mouse", "ClickData"]

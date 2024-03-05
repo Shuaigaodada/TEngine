@@ -7,9 +7,9 @@ import curses
 import traceback
 import typing as T
 from .. import dataTypes
-from .Input import Input
-from .Screen import Screen
-from .Renderer import Renderer
+from .input import Input
+from .screen import Screen
+from .renderer import Renderer
 from .fileLogger import DebugLogger
 
 """

@@ -2,7 +2,7 @@ import curses
 import traceback
 import typing as T
 from .. import dataTypes
-from .Component import Component, Text
+from .component import Component, Text
 
 __all__ = ["Screen"]
 
@@ -33,7 +33,7 @@ class Screen(Component):
             for attr in color[1:]:
                 colorAttrs |= attr
         elif isinstance(color, str):
-            from .TEngine import TEngine
+            from .engine import TEngine
             colorAttrs = TEngine.instance.renderer.getColor(color)
         else:
             colorAttrs = color

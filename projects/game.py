@@ -5,7 +5,7 @@ import typing as T
 from player import *
 from TEngine import *
 from cardPile import *
-from TEngine.Engine import Component
+from TEngine.Engine import component
 
 
 
@@ -75,7 +75,7 @@ class Game( TEngine ):
             self.screen.clear( False )
             self.draw( )
             
-            key = self.input.get( )
+            key = self.input.getch( )
             
             if key == self.input.Q:
                 running = False
