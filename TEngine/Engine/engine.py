@@ -10,6 +10,7 @@ from .. import dataTypes
 from .input import Input
 from .screen import Screen
 from .renderer import Renderer
+from .resource import Resource
 from .fileLogger import DebugLogger
 
 """
@@ -23,36 +24,42 @@ TEngine应当有几个类实例
 
 class TEngine:
     instance: "TEngine" = None
-    def __init__(self) -> None:
+    def __init__(self, base_path: str = ".") -> None:
         self.stdscr  :  T.Optional[curses.window]   = None
         self.logger  :  DebugLogger  = None if not DebugLogger.instance else DebugLogger.instance[0]
         
         self.renderer:  Renderer     = Renderer    (      )
         self.screen  :  Screen       = Screen      (      )
         self.input   :  Input        = Input       (      )
-        
+        self.resource:  Resource     = Resource    ( base_path )
+
         TEngine.instance             = self
         return
     
-    def setLogger(self, logger: DebugLogger) -> None:
-        """设置日志记录器"""
-        self.logger                 = logger    # self      logger
-        self.renderer.setLogger     ( logger )  # renderer  logger
-        self.screen.setLogger       ( logger )  # screen    logger
-        self.input.setLogger        ( logger )  # input     logger
-        self.input.mouse.setLogger  ( logger )  # mouse     logger
+    def set_basepath( self, __path: str ) -> None:
+        """设置资源基础路径"""
+        self.resource.srcPath = __path
         return
     
-    def SetScreen(self, stdscr: curses.window) -> None:
+    def setLogger(self, __logger: DebugLogger) -> None:
+        """设置日志记录器"""
+        self.logger                 = __logger    # self      logger
+        self.renderer.setLogger     ( __logger )  # renderer  logger
+        self.screen.setLogger       ( __logger )  # screen    logger
+        self.input.setLogger        ( __logger )  # input     logger
+        self.input.mouse.setLogger  ( __logger )  # mouse     logger
+        return
+    
+    def SetScreen(self, __stdscr: curses.window) -> None:
         """设置新的屏幕为绘制屏幕"""
-        self.stdscr                 = stdscr    # self      stdscr
-        self.renderer.setScreen     ( stdscr )  # renderer  stdscr
-        self.screen.setScreen       ( stdscr )  # screen    stdscr
-        self.input.setScreen        ( stdscr )  # input     stdscr
-        self.input.mouse.setScreen  ( stdscr )  # mouse     stdscr
+        self.stdscr                 = __stdscr    # self      stdscr
+        self.renderer.setScreen     ( __stdscr )  # renderer  stdscr
+        self.screen.setScreen       ( __stdscr )  # screen    stdscr
+        self.input.setScreen        ( __stdscr )  # input     stdscr
+        self.input.mouse.setScreen  ( __stdscr )  # mouse     stdscr
         return 
     
-    def _init(self, registerExit: bool = True) -> None:
+    def _init(self, __register: bool = True) -> None:
         """
         初始化引擎, 进入cbreak和noecho模式, 设置光标不可见, 初始化颜色。
         
@@ -68,7 +75,7 @@ class TEngine:
         self.           SetScreen           (  self.stdscr  )           # set stdscr
         self.input.     init                (               )           # init keys
         self.stdscr.    keypad              (      True     )           # enable keypad
-        if registerExit:
+        if __register:
             # 注册退出事件
             atexit.     register            (   self.exit   )           # register exit event
             
