@@ -17,8 +17,41 @@ class ReturnedData(NamedTuple):
     client: socket.socket
     data: bytes
     
-    def as_json( self, encoding: str = "utf-8", *args, **kwargs ) -> Dict[str, Any]:
-        return json.loads( self.data.decode( encoding ), *args, **kwargs )
+    
+    def as_json( self, encoding: str = "utf-8", *args, **kwargs ) -> Optional[Dict[str, Any]]:
+        try:
+            return json.loads( self.data.decode( encoding ), *args, **kwargs )
+        except json.JSONDecodeError:
+            return None
+    def as_list( self, encoding: str = "utf-8", *args, **kwargs ) -> List[Any]:
+        return self.as_json( encoding, *args, **kwargs )
+    def as_dict( self, encoding: str = "utf-8", *args, **kwargs ) -> Dict[str, Any]:
+        return self.as_json( encoding, *args, **kwargs )
+    
+    def as_number( self, __type: Type, encoding: str = "utf-8", *args, **kwargs ) -> Union[int, float]:
+        if isinstance( __type, str ):
+            return struct.unpack( __type, self.data.decode( encoding, *args, **kwargs ) )[ 0 ]
+        else:
+            if isinstance( __type, int ):
+                return self.__deint( 'L' )
+            elif isinstance( __type, float ):
+                return self.__deint( 'f' )
+            else:
+                return self.__deint( 'i' )
+    def as_boolen( self ) -> bool:
+        return struct.unpack( "?", self.data )[ 0 ]
+            
+    
+    def __deint( self, key: str ) -> str:
+        fmt = [ "<", ">" ]
+        keys = [ fmt[ 0 ] + key, key, fmt[ 1 ] + key ]
+        for k in keys:
+            try:
+                return struct.unpack( k, self.data )[ 0 ]
+            except struct.error:
+                continue
+        raise struct.error( f"Invalid key: {key}" )    
+            
     
     def decode( self, encoding: str = "utf-8", __error: str = "strict" ) -> str:
         return self.data.decode( encoding, __error )
@@ -228,6 +261,19 @@ class SocketServer:
             else:
                 with open( self.lcfg.get( "file" ), "a" ) as fp:
                     fp.write( f"{__tuple.message.format( *__format )}\n" )
+    
+    def encode( self, __data: Any, encoding: str = "utf-8" ) -> bytes:
+        """编码数据"""
+        if isinstance( __data, bytes ):
+            return __data
+        elif isinstance( __data, str ):
+            return __data.encode( encoding )
+        elif isinstance( __data, (list, dict) ):
+            return json.dumps( __data ).encode( encoding )
+        elif isinstance( __data, (int, float) ):
+            return struct.pack( ">L", __data )
+        else:
+            return pickle.dumps( __data )
     
     def __config_logger( self, __cfg: Optional[ Dict[str, object] ] ) -> None:
         if __cfg is None:
