@@ -49,17 +49,20 @@ class FileLoader(Component):
         return self.filePath
 
 class Resource:
+    instance: "Resource" = None
     def __init__(self, srcPath: str) -> None:
-        global resource
         basePath = os.getcwd()
         srcPath = srcPath.replace("/", os.sep)
         if srcPath.startswith(os.sep):
             self.srcPath = srcPath
         else:
             self.srcPath = os.path.join(basePath, srcPath)
-        
-        resource = self
+        Resource.instance = self        
         return
+
+    @staticmethod
+    def Load( name: str, existok: bool = False ) -> FileLoader:
+        return Resource.instance.load(name, existok)
     
     def load(self, name: str, existOk: bool = False) -> FileLoader:
         # 分割文件路径
@@ -90,4 +93,3 @@ class Resource:
             return FileLoader(os.path.join(self.srcPath, name))
 
 
-resource: Resource = None

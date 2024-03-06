@@ -5,12 +5,12 @@ except ModuleNotFoundError:
 
 from .Engine.fileLogger import DebugLogger
 from .Engine.engine import TEngine
-from .Engine.resource import Resource, FileLoader, resource
+from .Engine.resource import Resource, FileLoader
 
 version = "0.0.0beta"
 __all__ = [
     "version",
     "DebugLogger",
     "TEngine",
-    "Resource", "FileLoader", "resource"
+    "Resource", "FileLoader"
 ]
