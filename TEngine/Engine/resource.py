@@ -3,7 +3,7 @@ import json
 import pickle
 import typing as T
 from .component import Component
-__all__ = ["Resource", "FileLoader"]
+__all__ = ["Resource", "FileLoader", "resource"]
 
 
 class FileLoader(Component):
@@ -50,12 +50,15 @@ class FileLoader(Component):
 
 class Resource:
     def __init__(self, srcPath: str) -> None:
+        global resource
         basePath = os.getcwd()
         srcPath = srcPath.replace("/", os.sep)
         if srcPath.startswith(os.sep):
             self.srcPath = srcPath
         else:
             self.srcPath = os.path.join(basePath, srcPath)
+        
+        resource = self
         return
     
     def load(self, name: str, existOk: bool = False) -> FileLoader:
@@ -87,4 +90,4 @@ class Resource:
             return FileLoader(os.path.join(self.srcPath, name))
 
 
-
+resource: Resource = None
