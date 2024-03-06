@@ -137,11 +137,18 @@ class SocketClient:
         return self
     def __exit__( self, exc_type, exc_value, traceback ) -> None:
         self.close()
-        
+    
+    def disconnect( self, read: bool = True, write: bool = True ) -> None:
+        """断开连接"""
+        if read:
+            self.socket.shutdown( socket.SHUT_RD )
+        if write:
+            self.socket.shutdown( socket.SHUT_WR )
+    
     def close( self ) -> None:
         """关闭连接"""
         try:
-            self.socket.shutdown( socket.SHUT_RDWR )
+            self.disconnect( )
             self.socket.close()
         except OSError:
             return
