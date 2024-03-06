@@ -64,17 +64,17 @@ class SocketClient:
         self.socket = socket.socket( socket_family, socket_protocol )
         self.__size_buffer: int = -1
 
-    def connect( self, __timeout: Optional[int] = None, __retry: int = 3 ) -> None:
+    def connect( self, __timeout: Optional[int] = None, retry: int = 3 ) -> None:
         """连接服务器"""
         
         self.socket.settimeout( __timeout )
         
-        for i in range( __retry ):
+        for i in range( retry ):
             try:
                 self.socket.connect( (self.host_address, self.port) )
                 break
             except Exception as e:
-                if i == __retry - 1:
+                if i == retry - 1:
                     raise e
                 else:
                     time.sleep( 1 )
