@@ -1,18 +1,19 @@
 __all__ = ["Player", "AI"]
 import env
 import const
-import typing as T
 from roles import *
+from typing import *
 from cardPile import *
-from main import resource
+from socket import socket
+from server import resource
 
 class Player:
-    def __init__(self, globalCardPile: CardPile) -> None:
+    def __init__(self, client: socket, globalCardPile: CardPile) -> None:
         self.level          : int               = 2
         self.exp            : int               = 0
         self.coin           : int               = 0
-        self.cards          : T.List[Role]      = list()
-        self.items          : T.List[str]       = list()
+        self.cards          : List[Role]      = list()
+        self.items          : List[str]       = list()
         
         self.health         : int               = 100
         self.maxHealth      : int               = 100
@@ -23,22 +24,65 @@ class Player:
         self.levelUpExp     : int               = 4
         self.roundExp       : int               = 2
         
-        self.hextech        : T.List[str]       = list()
+        self.hextech        : List[str]       = list()
         
         self.maxInterest    : int               = 5
         self.WLCounts       : int               = 0 # 负数表示连败次数, 正数表示连胜次数
-        self.WLInterest     : T.Dict[int, int]  = { 3 : 1, 4 : 1, 5 : 2, 6 : 3 }
+        self.WLInterest     : Dict[int, int]  = { 3 : 1, 4 : 1, 5 : 2, 6 : 3 }
         
-        self.cardPile       : T.Dict[int, Role] = { 1: None, 2: None, 3: None, 4: None, 5: None }
+        self.cardPile       : Dict[int, Role] = { 1: None, 2: None, 3: None, 4: None, 5: None }
         self.globalCardPile : CardPile          = globalCardPile
-        self.levelExp       : T.Dict[str, int]  = resource.load( const.file_levelexp ).asJson()
+        self.levelExp       : Dict[str, int]  = resource.load( const.file_levelexp ).asJson()
         
         # int level exp keys
         self.levelExp = { int(k): v for k, v in self.levelExp.items() }
+        self.client = client
         
-        self.__offset_list: T.List[ int ] = [ ]
+        self.__offset_list: List[ int ] = [ ]
         
-    def get_drawpos( self ) -> T.List[ int ]:
+    def as_json( self ) -> Dict[ str, Any ]:
+        """
+        return {
+            "level": self.level,
+            "exp": self.exp,
+            "levelExp": self.levelExp[ self.level ] if self.levelExp[ self.level ] != -1 else "max",
+            "coin": self.coin,
+            "items": self.items,
+            "health": self.health,
+            "maxHealth": self.maxHealth,
+            "levelUpCost": self.levelUpCost,
+            "refreshCost": self.refreshCost,
+            "roundExp": self.roundExp,
+            "hextech": self.hextech,
+            "maxInterest": self.maxInterest,
+            "WLCounts": self.WLCounts,
+            "WLInterest": self.WLInterest,
+            "cardPile": self.cardPile,
+            "cards": self.cards,
+            "draw_pos": self.get_drawpos( )
+        }
+        """
+        return {
+            "level": self.level,
+            "exp": self.exp,
+            "levelExp": self.levelExp,
+            "coin": self.coin,
+            "items": self.items,
+            "health": self.health,
+            "maxHealth": self.maxHealth,
+            "levelUpCost": self.levelUpCost,
+            "refreshCost": self.refreshCost,
+            "roundExp": self.roundExp,
+            "hextech": self.hextech,
+            "maxInterest": self.maxInterest,
+            "WLCounts": self.WLCounts,
+            "WLInterest": { str(c): curc for c, curc in self.WLInterest.items( ) },
+            "cardPile": { str( idx ): card.as_json() for idx, card in self.cardPile.items( ) },
+            "cards": [card.as_json() for card in self.cards],
+            "draw_pos": self.get_drawpos( )
+        }
+        
+    def get_drawpos( self ) -> List[ int ]:
         if self.__offset_list:
             return self.__offset_list
         
@@ -141,9 +185,9 @@ class Player:
         sortKey = lambda card: ( -card.cost, card.name, -card.level )
         self.cards.sort( key = sortKey )
     
-    def cardCount( self ) -> T.Dict[ str, T.Dict[ int, int ] ]:
+    def cardCount( self ) -> Dict[ str, Dict[ int, int ] ]:
         """获取卡牌数量"""
-        counter: T.Dict[ str, T.Dict[ int, int ] ] = {}
+        counter: Dict[ str, Dict[ int, int ] ] = {}
         for card in self.cards:
             counter[ card.name ] = counter.get( card.name, { card.level: 0 } )
             counter[ card.name ][ card.level ] = counter[ card.name ].get( card.level, 0 ) + 1

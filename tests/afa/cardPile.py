@@ -1,23 +1,24 @@
 import env
 import const
 import random
-import typing as T
 from roles import *
-from TEngine import Resource
+from typing import *
+from server import resource
+
 
 __all__ = ['CardPile']
 
-from main import resource
+
 
 class Stack:
     def __init__(self) -> None:
-        self.__backStack:   T.List[Role]                = []
+        self.__backStack:   List[Role]                = []
         
     @property
     def size(self) -> int:
         return len(self.__backStack)
     
-    def push(self, *roles: T.Tuple[Role]) -> None:
+    def push(self, *roles: Tuple[Role]) -> None:
         self.__backStack.extend(roles)
         return
     
@@ -26,8 +27,8 @@ class Stack:
 
 class CardPile:
     def __init__(self) -> None:
-        self.__pile:        T.List[T.List[Role]]        = []
-        self.__prob:        T.Dict[str, T.List[int]]    = {}
+        self.__pile:        List[List[Role]]        = []
+        self.__prob:        Dict[str, List[int]]    = {}
         self.stack:         Stack                       = Stack()
         
         
@@ -65,10 +66,10 @@ class CardPile:
         del self.__pile[cost][roleIndex]
         return role
 
-    def draw(self, level: int) -> T.List[Role]:
+    def draw(self, level: int) -> List[Role]:
         return [self.drawOnce(level) for _ in range(5)]
     
-    def push(self, *roles: T.Tuple[Role]) -> None:
+    def push(self, *roles: Tuple[Role]) -> None:
         self.stack.push(*roles)
         for _ in range( self.stack.size ):
             role: Role = self.stack.pop()

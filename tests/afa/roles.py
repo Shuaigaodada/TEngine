@@ -1,11 +1,11 @@
-import unicodedata as _ucdata
 import os
-import typing as T
 import env
+from typing import *
 from TEngine import Resource
+import unicodedata as _ucdata
 
 __all__ = ['Role']
-ChEnRoleNames: T.Dict[str, str] = None
+ChEnRoleNames: Dict[str, str] = None
 
 class Role:
     def __init__(self, name: str, cost: int) -> None:
@@ -29,6 +29,46 @@ class Role:
         
         self.score = 0
     
+    def as_json( self ) -> Dict[ str, int | bool | str ]:
+        """
+        return {
+            "name": self.name,
+            "cost": self.cost,
+            "level": self.level,
+            "maxHealthPoint": self.maxHealthPoint,
+            "healthPoint": self.healthPoint,
+            "physicAttackPoint": self.physicAttackPoint,
+            "magicAttackPoint": self.magicAttackPoint,
+            "maxManaPoint": self.maxManaPoint,
+            "manaPoint": self.manaPoint,
+            "physicDefensePoint": self.physicDefensePoint,
+            "magicDefensePoint": self.magicDefensePoint,
+            "speed": self.speed,
+            "criticalRate": self.criticalRate,
+            "criticalDamage": self.criticalDamage,
+            "skillCanCritical": self.skillCanCritical,
+            "score": self.score
+        }
+        """
+        return {
+            "name": self.name,
+            "cost": self.cost,
+            "level": self.level,
+            "maxHealthPoint": self.maxHealthPoint,
+            "healthPoint": self.healthPoint,
+            "physicAttackPoint": self.physicAttackPoint,
+            "magicAttackPoint": self.magicAttackPoint,
+            "maxManaPoint": self.maxManaPoint,
+            "manaPoint": self.manaPoint,
+            "physicDefensePoint": self.physicDefensePoint,
+            "magicDefensePoint": self.magicDefensePoint,
+            "speed": self.speed,
+            "criticalRate": self.criticalRate,
+            "criticalDamage": self.criticalDamage,
+            "skillCanCritical": self.skillCanCritical,
+            "score": self.score
+        }
+    
     def __eq__( self, other: "Role" ) -> bool:
         return self.name == other.name and self.level == other.level
     
@@ -41,7 +81,7 @@ class Role:
     def sell_price(self) -> int:
         return self.cost * ( 3 ** ( self.level - 1 ) )
     @property
-    def sell_count(self) -> T.List["Role"]:
+    def sell_count(self) -> List["Role"]:
         return [ type( self )() ] * ( 3 ** self.level - 1 )
 
     @property
