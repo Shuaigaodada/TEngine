@@ -2,9 +2,9 @@ __all__ = ["Game"]
 import env
 import const
 import typing as T
-from player import *
+from tests.afa.player import *
 from TEngine import *
-from cardPile import *
+from tests.afa.cardPile import *
 from TEngine.Engine import component
 
 
