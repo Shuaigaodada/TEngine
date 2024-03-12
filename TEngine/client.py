@@ -4,50 +4,19 @@ import json
 import pickle
 import socket
 import struct
+import ssl as SSL
 from typing import *
+from .converter import Converter
 
 __all__ = ['SocketClient']
 
-class ReturnedBytes(NamedTuple):
-    data: bytes
-    
-    @property
-    def size( self ) -> int:
-        return len( self.data )
-    def __len__( self ) -> int:
-        return self.size
-    
-    def as_json( self, encoding: str = "utf-8", *args: Tuple[Any], **kwargs: Dict[str, Any] ) -> Dict[str, Any]:
-        return json.loads( self.data.decode( encoding ), *args, **kwargs )
-    def decode( self, encoding: str = "utf-8", __error: str = "strict" ) -> str:
-        return self.data.decode( encoding, __error )
-    
-    # same for as_json (as_list, as_dict)
-    def as_list( self, encoding: str = "utf-8", *args: Tuple[Any], **kwargs: Dict[str, Any] ) -> List[Any]:
-        return self.as_json( encoding, *args, **kwargs )
-    def as_dict( self, encoding: str = "utf-8", *args: Tuple[Any], **kwargs: Dict[str, Any] ) -> Dict[str, Any]:
-        return self.as_json( encoding, *args, **kwargs )
-    # end
-    
-    def as_object( self, 
-                    fix_imports : bool  = True, 
-                    encoding    : str   = "utf-8", 
-                    errors      : str   = "strict",
-                    buffers     : bool  = None 
-                    ) -> Any:
-        
-        return pickle.loads( self.data, fix_imports, encoding, errors, buffers )
-    
-    @property
-    def bytes( self ) -> bytes:
-        return self.data
 
 class SocketClient:
-    def __init__( self, 
+    def __init__( self,
                  host_address   : str       = "localhost", 
                  port           : int       = 8000,
                  family         : int | str = "IPv4",
-                 protocol       : int | str = "TCP"
+                 protocol       : int | str = "TCP",
                  ) -> None:
         self.host_address = host_address
         self.port = port
@@ -64,6 +33,11 @@ class SocketClient:
         self.socket = socket.socket( socket_family, socket_protocol )
         self.__size_buffer: int = -1
 
+    def create_SSL( self, certfile: str, context_kwargs: Dict = {}, locations_kwargs: Dict = {}, wrap_kwargs: Dict = {} ) -> None:
+        context = SSL.create_default_context( **context_kwargs )
+        context.load_verify_locations( certfile, **locations_kwargs )
+        self.socket = context.wrap_socket( self.socket, **wrap_kwargs )
+    
     def connect( self, __timeout: Optional[int] = None, retry: int = 3 ) -> None:
         """连接服务器"""
         
@@ -104,7 +78,7 @@ class SocketClient:
              __size: int = -1, 
              __flags: int = 0, 
              __timeout: Optional[int] = None 
-             ) -> ReturnedBytes:
+             ) -> Optional[Converter]:
         
         recv: Callable = self.socket.recv if self.protocol == "TCP" else self.socket.recvfrom
         
@@ -120,16 +94,19 @@ class SocketClient:
                     return None # TODO: 处理超时
                 except BlockingIOError:
                     return None # TODO: 处理阻塞
-            
-            try:
-                data: bytes = recv( self.__size_buffer, __flags )
-                self.__size_buffer = -1
-                return ReturnedBytes( data )
-            except socket.timeout:
-                return None # TODO: 处理超时
-            except BlockingIOError:
-                return None # TODO: 处理阻塞
-            
+            data: bytes = b""
+            while len(data) < self.__size_buffer:
+                try:
+                    chunk: bytes = recv( self.__size_buffer - len(data), __flags )
+                    if not chunk:
+                        break # connection closed
+                    data += chunk
+                except socket.timeout:
+                    return None # TODO: 处理超时
+                except BlockingIOError:
+                    return None # TODO: 处理阻塞
+            self.__size_buffer = -1
+            return Converter( data )
         else:
             return recv( __size, __flags )
         
@@ -161,6 +138,8 @@ class SocketClient:
             return __data.encode( encoding )
         elif isinstance( __data, (list, dict) ):
             return json.dumps( __data ).encode( encoding )
+        elif isinstance( __data, bool ):
+            return struct.pack( "?", __data )
         elif isinstance( __data, (int, float) ):
             return struct.pack( ">L", __data )
         else:
