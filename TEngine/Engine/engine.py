@@ -33,8 +33,7 @@ class TEngine:
         self.input   :  Input        = Input       (      )
         self.resource:  Resource     = Resource    ( base_path )
 
-        TEngine.instance             = self
-        return
+        TEngine.instance = self
     
     def set_basepath( self, __path: str ) -> None:
         """设置资源基础路径"""
