@@ -9,47 +9,48 @@ __all__ = ["Resource", "FileLoader", "resource"]
 class FileLoader(Component):
     def __init__(self, filePath: str, encoding: str = None) -> None:
         super().__init__()
-        self.filePath = filePath
+        self.path = filePath
         self.encoding = encoding if encoding is not None else "utf-8"
         return
 
     def asString(self) -> str:
-        with open(self.filePath, "r", encoding=self.encoding) as file:
+        with open(self.path, "r", encoding=self.encoding) as file:
             return file.read()
     
     def asFile(self) -> T.IO:
-        return open(self.filePath, "r")
+        return open(self.path, "r")
     
     def asLines(self) -> T.List[str]:
-        with open(self.filePath, "r", encoding=self.encoding) as file:
+        with open(self.path, "r", encoding=self.encoding) as file:
             return file.readlines()
     
     def asJson(self) -> T.Dict:
-        with open(self.filePath, "r", encoding=self.encoding) as file:
+        with open(self.path, "r", encoding=self.encoding) as file:
             return json.load(file)
     
     def asObject(self) -> object:
-        with open(self.filePath, "rb", encoding=self.encoding) as file:
+        with open(self.path, "rb", encoding=self.encoding) as file:
             return pickle.load(file)
         
     def write(self, data: str | T.Dict | object) -> None:
         if type(data) is str:
-            with open(self.filePath, "w", encoding=self.encoding) as file:
+            with open(self.path, "w", encoding=self.encoding) as file:
                 file.write(data)
         elif type(data) is dict:
-            with open(self.filePath, "w", encoding=self.encoding) as file:
+            with open(self.path, "w", encoding=self.encoding) as file:
                 json.dump(data, file)
         else:
-            with open(self.filePath, "wb", encoding=self.encoding) as file:
+            with open(self.path, "wb", encoding=self.encoding) as file:
                 pickle.dump(data, file)
         return
 
-    @property
-    def path(self) -> str:
-        return self.filePath
-
 class Resource:
     instance: "Resource" = None
+    def __new__( cls, *args, **kwargs ) -> "Resource":
+        if not cls.instance:
+            cls.instance = super().__new__(cls)
+        return cls.instance
+    
     def __init__(self, srcPath: str) -> None:
         basePath = os.getcwd()
         srcPath = srcPath.replace("/", os.sep)
@@ -57,7 +58,6 @@ class Resource:
             self.srcPath = srcPath
         else:
             self.srcPath = os.path.join(basePath, srcPath)
-        Resource.instance = self        
         return
 
     @staticmethod
