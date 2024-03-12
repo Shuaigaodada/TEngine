@@ -1,8 +1,11 @@
 import env
+import os
+import json
 import const
 import unicodedata
 from typing import *
 from TEngine import TEngine
+from TEngine import Resource
 from TEngine.client import SocketClient
 
 host = "localhost"
@@ -41,13 +44,24 @@ class Player:
     
     def _init( self ) -> None:
         self.cards = [ Role( card ) for card in self.cards ]
-        self.cardPile = { int( idx ): Role( card ) for idx, card in self.cardPile.items( ) }
+        self.cardPile = { int( idx ): (Role( card ) if card is not None else None) for idx, card in self.cardPile.items( ) }
     
-    def check_card( self, other: "Role" ) -> bool:
+    def check_card( self, other: Union[str, "Role"] ) -> bool:
         for card in self.cards:
-            if card.name == other.name and card.level < 3:
-                return True
+            if isinstance( other, Role ):
+                if card.name == other.name and card.level < 3:
+                    return True
+            else:
+                if card.name == other and card.level < 3:
+                    return True
         return False
+
+    def counter( self ) -> Dict[ str, Dict[ int, int ] ]:
+        counter: Dict[ str, Dict[ int, int ] ] = { }
+        for card in self.cards:
+            counter[ card.name ] = counter.get( card.name, { card.level: 0 } )
+            counter[ card.name ][ card.level ] = counter[ card.name ].get( card.level, 0 ) + 1
+        return counter
 
 class Role:
     def __init__( self, role_dict: Dict[ str, Union[str, int, bool] ] ) -> None:
@@ -81,30 +95,86 @@ class Game( TEngine ):
     def __init__( self, *args, **kwargs ):
         super( ).__init__( *args, **kwargs )
         self.client = SocketClient( host, port )
+        self.resource = Resource(
+            os.path.join(
+                os.path.dirname(
+                    os.path.abspath(
+                        __file__
+                    )
+                ),
+                "src"
+            )
+        )
+        cert = self.resource.load( "ssl_cert/cert.pem" ).path
+        key  = self.resource.load( "ssl_cert/key.pem"  ).path
+        self.client.create_SSL( cert, key )
         self.client.connect( )
         self._init( )
         self.create_color( )
         self.player: Player = None
+        self.buyCardKeys = [ str( idx ) for idx in range( 1, 6 ) ]
 
-    def main( self ):
+    def run( self ):
         self.client.send( READY )
         
+        if not self.client.recv( ).as_bool( ):
+            raise Exception( "server not ready" )
+            
+        self.input.mouse.init( )
+        self.post( )
         while True:
             # sort player's card and get player's information
-            self.player = self.post( sort_card=True )
             self.draw( )
+            
+            key = self.input.getch( )
+            
+            if key == self.input.Q:
+                self.post( exit=True )
+                break
+            
+            elif chr( key ) in self.buyCardKeys:
+                self.post( buy=int( chr( key ) ) )
+                continue
+            
+            elif key == self.input.D:
+                self.post( refresh=True )
+                continue
+            
+            elif key == self.input.F:
+                self.post( upgrade=True )
+                continue
+            
+            elif key == self.input.MOUSE_KEY:
+                mouse = self.input.mouse.get(  )
+                for click_name in mouse.clicked + mouse.pressed:
+                    if "role" in click_name.split( "-" ):
+                        idx = int( click_name.split( "-" )[ 1 ] )
+                        self.post( buy=idx )
+                    
+                    elif "player" in click_name.split( "-" ):
+                        idx = int( click_name.split( "-" )[ 1 ] )
+                        self.post( sell=idx )
+                        self.input.mouse.clear_clickbox( )
+                continue
+            
+            
+        self.client.close( )
             
             
     def draw( self ) -> None:
         if self.player is None:
             raise ValueError( "player info is empty" )
         self.screen.clear( )
-        
         self.screen.write( const.title )
         # draw ui
         for idx, UI in enumerate( self.create_ui( self.player ) ):
             self.screen.write( UI, 0, self.height - 2 - idx )
+
         self.draw_clientCardPile( )
+        self.draw_cardTip( )
+        self.draw_clientCards( )
+        
+        self.screen.update( )
         
     def draw_clientCardPile( self ) -> None:
         self.screen.write( const.currentPlayerPile, 0, self.height )
@@ -115,14 +185,15 @@ class Game( TEngine ):
                 continue
                 
             if self.player.check_card( card ):
-                self.renderer.start( "cost-" + str( card.cost) , self.renderer.STANDOUT )
+                self.renderer.start( "cost-" + str( card.cost ) , self.renderer.STANDOUT )
             else:
-                self.renderer.start( "cost-" + str( card.cost) )
+                self.renderer.start( "cost-" + str( card.cost ) )
             
-            self.screen.write( card.name, draw_pos[ idx ], self.height + 1 ) \
-                .set_clickbox( "role" + str( idx ) )
+            self.screen.write( card.name, draw_pos[ idx - 1 ], self.height ) \
+                .set_clickbox( "role-" + str( idx ) )
             
             self.renderer.end( )
+            
         return
     
     def draw_clientCards( self ) -> None:
@@ -153,6 +224,43 @@ class Game( TEngine ):
             self.input.mouse.set_clickbox( "player-" + str( idx ), *(click_box1 + click_box2).unpack( ) )
             offset += card.name_lenght + 2
         return
+    
+    def draw_cardTip( self ) -> None:
+        counter     = self.player.counter( )
+        cardpile    = list( self.player.cardPile.values( ) )
+        draw_pos    = self.player.draw_pos
+        
+        pile_count: Dict[ str, int ] = { } # role_name: count
+        
+        # 将卡牌对中的卡牌数量统计
+        for card in cardpile:
+            if card is not None:
+                pile_count[ card.name ] = pile_count.get( card.name, 0 ) + 1
+        
+        for name, count in pile_count.items( ):
+            if self.player.check_card( name ):
+                if counter[ name ].get( 1, 0 ) + count >= 3:
+                    star_pos = [ ]
+                    for idx, card in enumerate( cardpile ):
+                        if card is None: continue
+                        if card.name == name:
+                            star_pos.append( idx )
+                    
+                    level: int
+                    # 3 star
+                    if counter[ name ].get( 2, 0 ) * 3 + counter[ name ].get( 1, 0 ) + count >= 9:
+                        level = 3
+                    else:
+                        level = 2
+                    
+                    self.renderer.start( "star-" + str( level ) )
+                    
+                    for idx, pos in enumerate( star_pos ):
+                        position = draw_pos[ pos ] + len( name ) - ( level - 1 )
+                        self.screen.write( const.star * level, position, self.height - 1 )
+                    
+                    self.renderer.end( "star-" + str( level ) )
+                        
 
     def create_ui( self, player: Player ) -> List[ str ]:
         return [
@@ -178,7 +286,6 @@ class Game( TEngine ):
     def post( self, 
             refresh     : bool      = False,
             upgrade     : bool      = False,
-            sort_card   : bool      = False,
             exit        : bool      = False,
             buy         : int       = -1,
             sell        : int       = -1
@@ -187,13 +294,14 @@ class Game( TEngine ):
         post_data = {
             "refresh"   : refresh   ,
             "upgrade"   : upgrade   ,
-            "sort_card" : sort_card ,
             "exit"      : exit      ,
             "buy"       : buy       ,
             "sell"      : sell
         }
         self.client.send( post_data )
         data = self.client.recv( ).as_json( )
-        return Player( data )
+        self.player = Player( data )
         
          
+if __name__ == "__main__":
+    Game( ).run( )

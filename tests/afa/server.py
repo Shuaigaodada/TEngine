@@ -1,11 +1,13 @@
 import os
 import env
+import json
 from typing import *
 from player import *
-from cardPile import *
+from cardpile import *
+from loguru import logger
 from socket import socket
 from TEngine import Resource
-from TEngine.server import SocketServer
+from TEngine.server import SocketServer, SSClient
 
 __base__ = \
 os.path.join(
@@ -22,7 +24,7 @@ port = 9999
 resource = Resource( __base__ )
 
 
-def find_player( client: socket, players: List[ Player ] ) -> Player:
+def find_player( client: SSClient, players: List[ Player ] ) -> Player:
     for player in players:
         if player.client == client:
             return player
@@ -31,63 +33,86 @@ def find_player( client: socket, players: List[ Player ] ) -> Player:
 def main( *args, **kwargs ):
     server = SocketServer( address, port )
     
-    server.listen( )
-    clients = \
-    server.accept_for( 2 ) # test for 2 clients
+    cert = resource.load( "ssl_cert/cert.pem" ).path
+    key  = resource.load( "ssl_cert/key.pem" ) .path
+    server.create_SSL( cert, key )
     
+    logger.info( "start afa server" )
+    server.listen( )
+    
+    logger.info( "waiting for clients" )
+    server.accept_for( 1 ) # test for 1 clients
+    
+    logger.info( "init game" )
     # init game
     cardpile = CardPile( )
     players: List[ Player ] = [
-        Player( c, cardpile ) for c in clients
+        Player( c, cardpile ) for c in server.clients
     ]
+    # TODO: delete below code when done test
+    # -------start-----------
+    for player in players:
+        player.coin = 9999
+    # --------end------------
     
-    for data in server.recv( len( players ) ):
-        if not data.as_boolen( ):
+    
+    logger.info( "waiting for clients ready" )
+    for data in server.recv( len( players ), client_once=True ):
+        if not data.as_bool( ):
             raise Exception( "client not ready" )
     
+    server.send( True )
+    
+    logger.info( "game started" )
     # start game
     for player in players:
         player.refreshPile( True )
     
     while players:
-        poster = server.recv( 1 )[ 0 ]
+        poster = server.recv( 1 )[ 0 ]        
         post = poster.as_json( )
+        logger.info( "get post" )
         """
         post数据:
         {
             "refresh"   : bool,
             "upgrade"   : bool,
-            "sort_card" : bool,
             "exit"      : bool,
             "buy"       : int,
             "sell"      : int
         }
         """
-        if post is None or post.get( "exit", False ):
+
+        if post.get( "exit", False ) or not post:
+            logger.info( f"{poster.client.peername} was disconnect and exit" )
             players.remove( poster.client )
-            continue
-        
+                    
         player = find_player( poster.client, players )
+        # api check
         if post.get( "refresh", False ):
+            logger.info( f"{poster.client.peername} refresh card" )
             player.refreshPile( )
         if post.get( "upgrade", False ):
+            logger.info( f"{poster.client.peername} upgrade" )
             player.upgrade( )
-        if post.get( "sort_card", False ):
-            player.sortCard( )
         if post.get( "buy", -1 ) != -1:
+            logger.info( f"{poster.client.peername} buy card-{post.get( 'buy' )}" )
             player.buyCard( post[ "buy" ] )
+            player.synthesisCard( )
+            player.sortCard( )
         if post.get( "sell", -1 ) != -1:
+            logger.info( f"{poster.client.peername} sell card-{post.get( 'sell' )}" )
             player.sellCard( post[ "sell" ] )
+            player.synthesisCard( )
+            player.sortCard( )
         
+        logger.info( f"send back player information to {poster.client.peername}" )
+        server.send_to( player.client, json.dumps(player.as_json( ), indent=4) )
+        logger.info( f"data: {json.dumps( player.as_json(), indent=4 )}" )
         
-        server.send_to( player.client, player.as_json( ) )
-        
-        
-    
-    
-    
-    
+    logger.info( "server closing" )
     server.close( )
+    logger.info( "server closed" )
     
 
 if __name__ == "__main__":

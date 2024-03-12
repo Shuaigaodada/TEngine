@@ -3,11 +3,14 @@ import env
 import const
 from roles import *
 from typing import *
-from cardPile import *
+from cardpile import *
 from socket import socket
-from server import resource
+from TEngine import Resource
 
 class Player:
+    def __eq__( self, other: Union["Player", socket] ):
+        if isinstance( other, socket ): return self.client == other
+        else:                           return self.client == other.client
     def __init__(self, client: socket, globalCardPile: CardPile) -> None:
         self.level          : int               = 2
         self.exp            : int               = 0
@@ -32,7 +35,7 @@ class Player:
         
         self.cardPile       : Dict[int, Role] = { 1: None, 2: None, 3: None, 4: None, 5: None }
         self.globalCardPile : CardPile          = globalCardPile
-        self.levelExp       : Dict[str, int]  = resource.load( const.file_levelexp ).asJson()
+        self.levelExp       : Dict[str, int]  = Resource.Load( const.file_levelexp ).asJson()
         
         # int level exp keys
         self.levelExp = { int(k): v for k, v in self.levelExp.items() }
@@ -77,7 +80,7 @@ class Player:
             "maxInterest": self.maxInterest,
             "WLCounts": self.WLCounts,
             "WLInterest": { str(c): curc for c, curc in self.WLInterest.items( ) },
-            "cardPile": { str( idx ): card.as_json() for idx, card in self.cardPile.items( ) },
+            "cardPile": { str( idx ): (card.as_json() if card is not None else None) for idx, card in self.cardPile.items( ) },
             "cards": [card.as_json() for card in self.cards],
             "draw_pos": self.get_drawpos( )
         }
@@ -95,7 +98,12 @@ class Player:
         
     def sellCard(self, index: int) -> None:
         """出售卡牌"""
-        sell_card = self.cards.pop( index )
+        try:
+            sell_card = self.cards.pop( index )
+        except IndexError as e:
+            print( index )
+            print( self.cards )
+            raise e
         
         price, count = sell_card.sell_price, sell_card.sell_count
         self.coin += price
