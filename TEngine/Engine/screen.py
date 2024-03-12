@@ -72,12 +72,13 @@ class Screen(Component):
             string.set_position( x, y )
             # 字符绘制，如果超出屏幕范围，抛出异常
             try:
-                self.stdscr.move( y, x )
-                self.stdscr.addstr( string.__str__() )
+                self.stdscr.addstr( y, x, string.__str__() )
             except curses.error as e:
                 if self.logger is not None:
                     # 打印或记录错误信息
                     self.logger.error(e.__str__())
+                else:
+                    raise e
                     
                     
             # 关闭颜色
