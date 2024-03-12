@@ -1,96 +1,74 @@
-import os
 import json
 import pickle
 import socket
 import struct
+import ssl as SSL
 from typing import *
-from loguru import logger
 from threading import Thread
+from .converter import Converter
 
-__all__ = [ "SocketServer", "INFO", "WARNING", "ERROR", "ReturnedData", "LoggerTuple" ]
-class Logger:
-    def info( self, __msg: str ) -> None: ...
-    def warning( self, __msg: str ) -> None: ...
-    def error( self, __msg: str ) -> None: ...
+__all__ = [ "SocketServer", "SSClient" ]
 
-class ReturnedData(NamedTuple):
-    client: socket.socket
-    data: bytes
-    
-    
-    def as_json( self, encoding: str = "utf-8", *args, **kwargs ) -> Optional[Dict[str, Any]]:
-        try:
-            return json.loads( self.data.decode( encoding ), *args, **kwargs )
-        except json.JSONDecodeError:
-            return None
-    def as_list( self, encoding: str = "utf-8", *args, **kwargs ) -> List[Any]:
-        return self.as_json( encoding, *args, **kwargs )
-    def as_dict( self, encoding: str = "utf-8", *args, **kwargs ) -> Dict[str, Any]:
-        return self.as_json( encoding, *args, **kwargs )
-    
-    def as_number( self, __type: Type, encoding: str = "utf-8", *args, **kwargs ) -> Union[int, float]:
-        if isinstance( __type, str ):
-            return struct.unpack( __type, self.data.decode( encoding, *args, **kwargs ) )[ 0 ]
-        else:
-            if isinstance( __type, int ):
-                return self.__deint( 'L' )
-            elif isinstance( __type, float ):
-                return self.__deint( 'f' )
-            else:
-                return self.__deint( 'i' )
-    def as_boolen( self ) -> bool:
-        return struct.unpack( "?", self.data )[ 0 ]
-            
-    
-    def __deint( self, key: str ) -> str:
-        fmt = [ "<", ">" ]
-        keys = [ fmt[ 0 ] + key, key, fmt[ 1 ] + key ]
-        for k in keys:
-            try:
-                return struct.unpack( k, self.data )[ 0 ]
-            except struct.error:
-                continue
-        raise struct.error( f"Invalid key: {key}" )    
-            
-    
-    def decode( self, encoding: str = "utf-8", __error: str = "strict" ) -> str:
-        return self.data.decode( encoding, __error )
-    
-    def as_object( self, *args, **kwargs ) -> Any:
-        return pickle.loads( self.data, *args, **kwargs )
+# SSClient -> Socket Server Client( just allow to send, recv, and more server's client's operations )
+class SSClient:
+    def __init__( self, __client: socket.socket, address: str, __server: "SocketServer", ssl: bool = False, **wrap_kwargs ) -> None:
+        self.socket = __client
+        self.__server = __server
+        self.address = address
+        self.name = ""
+        
+        if ssl:
+            self.socket = SSL.wrap_socket( __client, server_side=True, **wrap_kwargs if wrap_kwargs else {"ssl_version": SSL.PROTOCOL_TLS} )
     
     @property
-    def bytes( self ) -> bytes:
-        return self.data
+    def connected( self ) -> "SocketServer":
+        return self.__server
+    
+    def send( self, __data: Any, __flags: int = 0, convert: bool = True ) -> None:
+        self.__server.send_to( self.socket, __data, __flags, convert )
+    
+    def recv( self, __size: int = -1, __flags: int = 0, __stuck: Union[str, Callable] = "none" ) -> Optional[ Converter ]:
+        return self.__server.recv_from( self.socket, __size, __flags, __stuck )
+
+    def close( self ) -> None:
+        self.__server.remove_client( self.socket )
+        self.socket.close( )
+    
+    def __eq__( self, other: Union[str, "SSClient", socket.socket] ) -> bool:
+        other = self.__server.find( other )
+        return self.socket == other.socket and other.name == self.name
+    
+    
     @property
-    def size( self ) -> int:
-        return len( self.data )
-
-class LoggerTuple(NamedTuple):
-    message: str
-    level: int
-
-INFO: int = 0
-WARNING: int = 1
-ERROR: int = 2
+    def blocking( self ) -> bool:
+        return self.socket.getblocking( )
+    @blocking.setter
+    def blocking( self, __blocking: bool ) -> None:
+        self.socket.setblocking( __blocking )
+        
+    @property
+    def timeout( self ) -> float:
+        return self.socket.gettimeout( )
+    @timeout.setter
+    def timeout( self, __timeout: float ) -> None:
+        self.socket.settimeout( __timeout )
+    
+    @property
+    def peername( self ) -> Tuple[str, int]:
+        return self.socket.getpeername( )
+    
 
 class SocketServer:
     def __init__(
                  self, 
-                 address    : str = 'localhost', 
-                 port       : int = 8000,
-                 family     : int | str = "IPv4",
-                 protocol   : int | str = "TCP",
-                 logging    : bool = True,
-                 log_cfg    : Dict[str, str] = None
+                 address    : str             = 'localhost', 
+                 port       : int             = 8000,
+                 family     : Union[str, int] = "IPv4",
+                 protocol   : Union[str, int] = "TCP"
                 ) -> None:
         self.address    : str        = address
         self.port       : int        = port
-        self.logging    : bool       = logging
-        self.lcfg       : Dict[str, Dict | str | object] = {}
         
-        if logging:
-            self.__config_logger( log_cfg )
         family_info = self.__family_info( family )
         proto_info = self.__proto_info( protocol )
         
@@ -102,12 +80,38 @@ class SocketServer:
         
         self.socket = socket.socket( socket_family, socket_protocol )
         
-        self.clients: Dict[ int | str, socket.socket ]  = { }
-        self.__bsize_buffer: Dict[ socket.socket: int ] = { }
+        self.clients: List[ SSClient ]  = []
+        self.__bsize_buffer: Dict[ SSClient: int ] = { }
         
         self.__binded: bool = False
-        self.set_option( socket.SOL_SOCKET, socket.SO_REUSEADDR, True )
+        self.__SSL   : bool = False
         
+        self.__SSL_wrap_kwarg = { }
+        self.set_option( socket.SOL_SOCKET, socket.SO_REUSEADDR, True )
+    
+    def find( self, __name_or_client: Union[str, socket.socket, SSClient] ) -> Optional[SSClient]:
+        if isinstance( __name_or_client, str ):
+            for client in self.clients:
+                if client.name == __name_or_client:
+                    return client
+            return None
+        elif isinstance( __name_or_client, SSClient ):
+            return __name_or_client
+        elif isinstance( __name_or_client, socket.socket ):
+            for client in self.clients:
+                if client.socket == __name_or_client:
+                    return client
+        else:
+            return None
+        
+    def remove_client( self, client: Union[str, socket.socket, SSClient] ) -> SSClient:
+        return self.clients.pop( self.clients.index( self.find( client ) ) )
+
+    def rename( self, __c: SSClient, __n: str ) -> str:
+        """client, name"""
+        __c.name = __n
+        return __n
+    
     def set_option( self, __level: int, __option: int, __value: bool ) -> None:
         self.socket.setsockopt( __level, __option, __value )
 
@@ -118,17 +122,24 @@ class SocketServer:
         self.socket.bind( (address, port) )
         self.__binded = True
         
-
     def listen( self, __backlog: int = -1 ) -> None:
         """backlog:最大连接数"""
         if not self.__binded:
             self.bind( )
-        
-        self.log( "listen", INFO, __backlog if __backlog != -1 else "unlimited")
         self.socket.listen( __backlog )
-        self.log( "show_link", INFO, f"http://{self.address}:{self.port}")
+    
+    def create_SSL( self, certfile: Optional[str], keyfile: Optional[str], **context_kwargs ) -> None:
+        context: SSL.SSLContext = SSL.create_default_context( **context_kwargs if context_kwargs else SSL.Purpose.CLIENT_AUTH )
+        context.load_cert_chain( certfile=certfile, keyfile=keyfile )
+        self.__SSL = True
 
-    def accept( self, __name: Optional[str | int] = None, __timeout: Optional[float] = None ) -> Tuple[socket.socket, str]:
+    def set_wrapper( self, **wrap_kwargs ) -> None:
+        if self.__SSL:
+            self.__SSL_wrap_kwarg = wrap_kwargs
+        else:
+            raise ValueError( "SSL is not create" )
+    
+    def accept( self, __name: Optional[str] = None, __timeout: Optional[float] = None ) -> Tuple[SSClient, str, str]:
         """接受客户端连接"""
         self.socket.settimeout( __timeout )
         
@@ -136,28 +147,26 @@ class SocketServer:
         except socket.timeout:  return None, None
         
         if __name is None:
-            __name = len( self.clients )
+            __name = "client-" + str(len( self.clients ))
         
         self.socket.settimeout( None )
-        self.clients[ __name ] = client
-        self.log( "accept", INFO, address )
-        return client, address
+        client = SSClient( client, address, self, self.__SSL, self.__SSL_wrap_kwarg )
+        self.clients.append( client )
+        return client, address, __name
 
-    def accept_for( self, __count: int, __timeout: Optional[float] = None ) -> List[ socket.socket ]:
+    def accept_for( self, __count: int, __timeout: Optional[float] = None ) -> List[ SSClient ]:
         """等待足够数量的客户端"""
-        self.log( "accept_for", INFO, __count )
         while len( self.clients ) < __count: self.accept( __timeout )
-        self.log( "all_accept", INFO )
         return self.clients
         
-    def recv_from( self, __client: socket.socket, __size: int = -1, __flags: int = 0, __stuck: Callable | str = "none" ) -> Optional[ bytes ]:
-        if __client not in self.clients.values( ):
+    def recv_from( self, __client: SSClient, __size: int = -1, __flags: int = 0, __stuck: Union[str, Callable] = "none" ) -> Optional[ Converter ]:
+        if __client not in self.clients:
             raise ValueError( "Invalid client" )
         
-        recv = __client.recv if self.protocol == "TCP" else __client.recvfrom
+        recv = __client.socket.recv if self.protocol == "TCP" else __client.socket.recvfrom
         if __size == -1:
             try:
-                if __client in self.__bsize_buffer:
+                if __client in self.__bsize_buffer.items():
                     raise struct.error( )
                 bytes_size = recv( struct.calcsize( ">L" ), __flags )
                 bsize = struct.unpack( ">L", bytes_size )[ 0 ]
@@ -170,11 +179,9 @@ class SocketServer:
                 bsize = bytes_size
             try:
                 data = recv( bsize, __flags )
-                self.log( "recv_from", INFO, __client.getsockname( ) )
-                return data
+                return Converter( data )
             except BlockingIOError:
-                if __client.getblocking( ):
-                    self.log( "timeout_block", ERROR )
+                if __client.blocking:
                     return None
                 else:
                     self.__bsize_buffer[ __client ] = bsize
@@ -186,49 +193,75 @@ class SocketServer:
             data = recv( __size, __flags )
             return data
     
-    def recv( self, __count: int = 1, __size: int = -1, __flags: int = 0, __stuck: Optional[Callable] | Optional[str] = "none", callback: Optional[Callable] = None ) -> List[ReturnedData]:
+    def recv( self, __count: int = 1, 
+             __size: int = -1, 
+             __flags: int = 0, 
+             callback: Optional[Callable] = None,
+             client_once: bool = False
+             ) -> List[Converter]:
         """接收数据"""
-        datas: List[ ReturnedData ] = [ ]
+        datas: List[ Converter ] = [ ]
         self.set_clients_blocking( False )
         
+        clients = self.clients.copy( )
         while len( datas ) < __count:
-            for client in self.clients.values( ):
-                data = self.recv_from( client, __size, __flags, __stuck )
+            for client in clients:
+                if len( datas ) >= __count: break
+                data = self.recv_from( client, __size, __flags )
                 if data:
-                    datas.append( ReturnedData( client, data ) )
+                    data.client = client
+                    datas.append( data )
                     if callback is not None:
                         callback( data )
+                    if client_once:
+                        clients.remove( client )
         
         self.set_clients_blocking( True )
         return datas
     
-    def send_to( self, __client: socket.socket, __data: bytes, __flags: int = 0 ) -> None:
+    def send_to( self, 
+                __client: SSClient, 
+                __data: bytes, 
+                __flags: int = 0, 
+                convert: bool = True,
+                ) -> None:
         """发送数据"""
-        if __client not in self.clients.values( ):
+        if __client not in self.clients:
             raise ValueError( "Invalid client" )
+        if convert:
+            __data = self.encode( __data )
         
         bsize = struct.pack( ">L", len( __data ) )
         # send data size
         try:
-            __client.sendall( bsize, __flags )
-            __client.sendall( __data, __flags )
+            __client.socket.sendall( bsize, __flags )
+            __client.socket.sendall( __data, __flags )
         except Exception as e:
-            self.log( e )
+            raise e
         
         return
     
-    def send( self, __data: bytes, __flags: int = 0 ) -> None:
+    def send( self, 
+             __data: bytes, 
+             __flags: int = 0, 
+             convert: bool = True,
+             without: List[SSClient] = []
+             ) -> None:
         """发送数据"""
-        for client in self.clients.values( ):
-            self.send_to( client, __data, __flags )
+        for client in self.clients:
+            if client not in without:
+                try:
+                    self.send_to( client, __data, __flags, convert )
+                except BrokenPipeError:
+                    continue
         return
     
     def set_clients_blocking( self, __blocking: bool ) -> None:
-        for client in self.clients.values( ):
-            client.setblocking( __blocking )
+        for client in self.clients:
+            client.socket.setblocking( __blocking )
     
     def close( self ) -> None:
-        for client in self.clients.values( ):
+        for client in self.clients:
             try:                client.close( )
             except Exception:   continue
         try:
@@ -236,31 +269,6 @@ class SocketServer:
         except OSError: pass
         finally:
             self.socket.close( )
-        self.log( "close", INFO )
-    
-    def log( self, __name: str, __level: int = INFO, *__format: Tuple[str] ) -> None:
-        __tuple = LoggerTuple( self.lcfg.get( "msg" ).get( __name ), __level )
-        # 如果没有消息或者不需要记录日志
-        if not self.logging: return
-        if not __tuple.message:
-            __tuple = LoggerTuple( __name, __level )
-        logger: Logger = self.lcfg.get( "logger" )
-        if __tuple.level == 0:
-            logger.info( __tuple.message.format( *__format ) )
-        elif __tuple.level == 1:
-            logger.warning( __tuple.message.format( *__format ) )
-        elif __tuple.level == 2:
-            logger.error( __tuple.message.format( *__format ) )
-        else:
-            raise ValueError( f"Invalid level: {__tuple.level}" )
-        
-        if self.lcfg.get( "file", None ) is not None:
-            if self.lcfg.get( "path", None ) is not None:
-                with open( os.path.join(self.lcfg.get( "path" ), self.lcfg.get( "file" )), "a" ) as fp:
-                    fp.write( f"{__tuple.message.format( *__format )}\n" )
-            else:
-                with open( self.lcfg.get( "file" ), "a" ) as fp:
-                    fp.write( f"{__tuple.message.format( *__format )}\n" )
     
     def encode( self, __data: Any, encoding: str = "utf-8" ) -> bytes:
         """编码数据"""
@@ -270,31 +278,12 @@ class SocketServer:
             return __data.encode( encoding )
         elif isinstance( __data, (list, dict) ):
             return json.dumps( __data ).encode( encoding )
+        elif isinstance( __data, bool ):
+            return struct.pack( "?", __data )
         elif isinstance( __data, (int, float) ):
             return struct.pack( ">L", __data )
         else:
             return pickle.dumps( __data )
-    
-    def __config_logger( self, __cfg: Optional[ Dict[str, object] ] ) -> None:
-        if __cfg is None:
-            self.lcfg = {
-                "file": None,
-                "path": None,
-                "logger": logger,
-                "msg": {
-                    "listen": "start listening for {0} clients",
-                    "accept": "accept connection from {0}",
-                    "accept_for": "waiting accept {0} clients",
-                    "all_accept": "all clients are accepted",
-                    "timeout_block": "time was out but didn't not get any data",
-                    "recv_from": "recv data from {0}",
-                    "close": "server closed",
-            
-                    "show_link": "you can see the link: {0}",
-                }
-            }
-        else:
-            self.lcfg = __cfg
         
     def __stuck_func( self, __name: str, __do: Callable, *args: Tuple[ Any ], **kwargs: Dict[ Any, Any ] ) -> Any:
         __name = __name.lower( )
@@ -313,7 +302,7 @@ class SocketServer:
         else:
             raise ValueError( f"Invalid stuck function name: {__name}" )
         
-    def __family_info( self, __family: str | int ) -> Tuple[ str, int ]:
+    def __family_info( self, __family: Union[str, int] ) -> Tuple[ str, int ]:
         """返回family的字符串表示和对应的socket.AF_XXX常量值"""
         family_string = ""
         if isinstance( __family, str ):
@@ -340,7 +329,7 @@ class SocketServer:
         
         return family_string, __family
     
-    def __proto_info( self, __proto: str | int ) -> Tuple[ str, int ]:
+    def __proto_info( self, __proto: Union[str, int] ) -> Tuple[ str, int ]:
         """返回protocol的字符串表示和对应的socket.SOCK_XXX常量值"""
         proto_str = ""
         if isinstance( __proto, str ):
@@ -365,14 +354,10 @@ class SocketServer:
             raise ValueError( f"Invalid protocol: {__proto}" )
         
         return proto_str, __proto
-    
-    
-    
+        
     def __enter__( self ) -> "SocketServer":
         return self
     def __exit__( self, exc_type, exc_val, exc_tb ) -> None:
-        if exc_type is not None:
-            self.log( f"exit_with_error: {exc_type.__name__}", ERROR )
         self.close( )
         return False
 
@@ -414,12 +399,3 @@ if __name__ == "__main__":
         
         Thread( target=send, args=(client1,) ).start( )
         Thread( target=send, args=(client2,) ).start( )
-        
-        callback = lambda bstr: server.log( bstr.decode( ), INFO )
-        
-        server.recv( 2, callback=callback )
-        
-        
-        
-              
-    
