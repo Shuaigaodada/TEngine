@@ -123,8 +123,10 @@ class DebugLogger:
 
     exceptions: T.List[ExceptionInfo] = []
 
+    def set_handle( self ) -> None:
+        sys.excepthook = handle_exception
+        return
 
 def handle_exception(exc_type, exc_value, exc_traceback):
-    DebugLogger.exceptions.append(ExceptionInfo(exc_type, exc_value, exc_traceback))
+    DebugLogger.exceptions.append(ExceptionInfo())
     
-sys.excepthook = handle_exception
