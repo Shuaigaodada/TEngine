@@ -4,14 +4,14 @@ import const
 from roles import *
 from typing import *
 from cardpile import *
-from socket import socket
 from TEngine import Resource
+from TEngine.server import SSClient
 
 class Player:
-    def __eq__( self, other: Union["Player", socket] ):
-        if isinstance( other, socket ): return self.client == other
-        else:                           return self.client == other.client
-    def __init__(self, client: socket, globalCardPile: CardPile) -> None:
+    def __eq__( self, other: Union["Player", SSClient] ):
+        if isinstance( other, SSClient ): return self.client == other
+        else:                             return self.client == other.client
+    def __init__(self, client: SSClient, globalCardPile: CardPile) -> None:
         self.level          : int               = 2
         self.exp            : int               = 0
         self.coin           : int               = 0

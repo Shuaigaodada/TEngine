@@ -71,7 +71,7 @@ def main( *args, **kwargs ):
     while players:
         poster = server.recv( 1 )[ 0 ]        
         post = poster.as_json( )
-        logger.info( "get post" )
+        logger.info( f"post: {post}" )
         """
         post数据:
         {
@@ -83,11 +83,14 @@ def main( *args, **kwargs ):
         }
         """
 
-        if post.get( "exit", False ) or not post:
-            logger.info( f"{poster.client.peername} was disconnect and exit" )
-            players.remove( poster.client )
                     
         player = find_player( poster.client, players )
+        
+        if post.get( "exit", False ):
+            logger.info( f"{poster.client.peername} was disconnect and exit" )
+            server.send_to( player.client, json.dumps(player.as_json( ), indent=4) )
+            players.remove( poster.client )
+            continue
         # api check
         if post.get( "refresh", False ):
             logger.info( f"{poster.client.peername} refresh card" )
@@ -102,13 +105,16 @@ def main( *args, **kwargs ):
             player.sortCard( )
         if post.get( "sell", -1 ) != -1:
             logger.info( f"{poster.client.peername} sell card-{post.get( 'sell' )}" )
-            player.sellCard( post[ "sell" ] )
+            try:
+                player.sellCard( post[ "sell" ] )
+            except IndexError:
+                logger.error( f"card-{post.get( 'sell' )} not found" )
             player.synthesisCard( )
             player.sortCard( )
         
-        logger.info( f"send back player information to {poster.client.peername}" )
+        # logger.info( f"send back player information to {poster.client.peername}" )
         server.send_to( player.client, json.dumps(player.as_json( ), indent=4) )
-        logger.info( f"data: {json.dumps( player.as_json(), indent=4 )}" )
+        # logger.info( f"data: {json.dumps( player.as_json(), indent=4 )}" )
         
     logger.info( "server closing" )
     server.close( )

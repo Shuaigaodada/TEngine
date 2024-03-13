@@ -82,7 +82,7 @@ class Role:
         return self.cost * ( 3 ** ( self.level - 1 ) )
     @property
     def sell_count(self) -> List["Role"]:
-        return [ type( self )() ] * ( 3 ** self.level - 1 )
+        return [ type( self )() ] * ( 3 ** (self.level - 1) )
 
     @property
     def name_lenght(self) -> int:

@@ -106,8 +106,7 @@ class Game( TEngine ):
             )
         )
         cert = self.resource.load( "ssl_cert/cert.pem" ).path
-        key  = self.resource.load( "ssl_cert/key.pem"  ).path
-        self.client.create_SSL( cert, key )
+        self.client.create_SSL( cert, wrap_kwargs={"server_hostname": host} )
         self.client.connect( )
         self._init( )
         self.create_color( )
@@ -159,7 +158,7 @@ class Game( TEngine ):
             
             
         self.client.close( )
-            
+        self.exit( )
             
     def draw( self ) -> None:
         if self.player is None:
