@@ -23,7 +23,7 @@ class Converter:
     def as_json( self, coding: str = "utf-8", *args, **kwargs ) -> Dict[ str, Any ]:
         try:
             return json.loads( self.__data.decode( coding ), *args, **kwargs )
-        except json.JSONDecoder:
+        except json.JSONDecodeError:
             return {}
     def as_list( self, coding: str = "utf-8", *args, **kwargs ) -> List[ Any ]:
         return list( json.loads( self.__data.decode( coding ), *args, **kwargs ) )
