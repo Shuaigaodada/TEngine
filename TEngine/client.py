@@ -33,7 +33,7 @@ class SocketClient:
         self.socket = socket.socket( socket_family, socket_protocol )
         self.__size_buffer: int = -1
 
-    def create_SSL( self, certfile: str, context_kwargs: Dict = {}, locations_kwargs: Dict = {}, wrap_kwargs: Dict = {} ) -> None:
+    def create_SSL( self, certfile: str, context_kwargs: Dict = {"purpose": SSL.Purpose.SERVER_AUTH}, locations_kwargs: Dict = {}, wrap_kwargs: Dict = {} ) -> None:
         context = SSL.create_default_context( **context_kwargs )
         context.load_verify_locations( certfile, **locations_kwargs )
         self.socket = context.wrap_socket( self.socket, **wrap_kwargs )

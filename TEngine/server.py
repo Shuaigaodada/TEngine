@@ -11,14 +11,22 @@ __all__ = [ "SocketServer", "SSClient" ]
 
 # SSClient -> Socket Server Client( just allow to send, recv, and more server's client's operations )
 class SSClient:
-    def __init__( self, __client: socket.socket, address: str, __server: "SocketServer", ssl: bool = False, **wrap_kwargs ) -> None:
+    def __init__( 
+                 self, 
+                 __client: socket.socket, 
+                 address: str, 
+                 __server: "SocketServer", 
+                 ssl: bool = False,
+                 context: Optional[SSL.SSLContext] = None,
+                 **wrap_kwargs ) -> None:
         self.socket = __client
         self.__server = __server
         self.address = address
         self.name = ""
+        self.id = id( self )
         
         if ssl:
-            self.socket = SSL.wrap_socket( __client, server_side=True, **wrap_kwargs if wrap_kwargs else {"ssl_version": SSL.PROTOCOL_TLS} )
+            self.socket = context.wrap_socket( __client, server_side=True, **wrap_kwargs )
     
     @property
     def connected( self ) -> "SocketServer":
@@ -27,16 +35,19 @@ class SSClient:
     def send( self, __data: Any, __flags: int = 0, convert: bool = True ) -> None:
         self.__server.send_to( self.socket, __data, __flags, convert )
     
-    def recv( self, __size: int = -1, __flags: int = 0, __stuck: Union[str, Callable] = "none" ) -> Optional[ Converter ]:
-        return self.__server.recv_from( self.socket, __size, __flags, __stuck )
+    def recv( self, __size: int = -1, __flags: int = 0 ) -> Optional[ Converter ]:
+        return self.__server.recv_from( self.socket, __size, __flags )
 
     def close( self ) -> None:
         self.__server.remove_client( self.socket )
         self.socket.close( )
     
+    def __hash__( self ) -> str:
+        return hash( self.socket )
+    
     def __eq__( self, other: Union[str, "SSClient", socket.socket] ) -> bool:
         other = self.__server.find( other )
-        return self.socket == other.socket and other.name == self.name
+        return self.socket == other.socket
     
     
     @property
@@ -85,6 +96,7 @@ class SocketServer:
         
         self.__binded: bool = False
         self.__SSL   : bool = False
+        self.context : Optional[SSL.SSLContext] = None
         
         self.__SSL_wrap_kwarg = { }
         self.set_option( socket.SOL_SOCKET, socket.SO_REUSEADDR, True )
@@ -128,10 +140,15 @@ class SocketServer:
             self.bind( )
         self.socket.listen( __backlog )
     
-    def create_SSL( self, certfile: Optional[str], keyfile: Optional[str], **context_kwargs ) -> None:
-        context: SSL.SSLContext = SSL.create_default_context( **context_kwargs if context_kwargs else SSL.Purpose.CLIENT_AUTH )
+    def create_SSL( self, certfile: Optional[str], keyfile: Optional[str], checkhost: bool = False, **context_kwargs ) -> None:
+        if not context_kwargs:
+            context_kwargs = { "purpose": SSL.Purpose.CLIENT_AUTH }
+        context: SSL.SSLContext = SSL.create_default_context( **context_kwargs )
         context.load_cert_chain( certfile=certfile, keyfile=keyfile )
+        context.check_hostname = checkhost
         self.__SSL = True
+        self.context = context
+
 
     def set_wrapper( self, **wrap_kwargs ) -> None:
         if self.__SSL:
@@ -150,7 +167,7 @@ class SocketServer:
             __name = "client-" + str(len( self.clients ))
         
         self.socket.settimeout( None )
-        client = SSClient( client, address, self, self.__SSL, self.__SSL_wrap_kwarg )
+        client = SSClient( client, address, self, self.__SSL, self.context, **self.__SSL_wrap_kwarg )
         self.clients.append( client )
         return client, address, __name
 
@@ -159,18 +176,20 @@ class SocketServer:
         while len( self.clients ) < __count: self.accept( __timeout )
         return self.clients
         
-    def recv_from( self, __client: SSClient, __size: int = -1, __flags: int = 0, __stuck: Union[str, Callable] = "none" ) -> Optional[ Converter ]:
+    def recv_from( self, __client: SSClient, __size: int = -1, __flags: int = 0 ) -> Optional[ Converter ]:
         if __client not in self.clients:
             raise ValueError( "Invalid client" )
         
         recv = __client.socket.recv if self.protocol == "TCP" else __client.socket.recvfrom
         if __size == -1:
             try:
-                if __client in self.__bsize_buffer.items():
+                if __client in self.__bsize_buffer.keys():
                     raise struct.error( )
                 bytes_size = recv( struct.calcsize( ">L" ), __flags )
                 bsize = struct.unpack( ">L", bytes_size )[ 0 ]
             except BlockingIOError:
+                return None
+            except SSL.SSLWantReadError:
                 return None
             except struct.error:
                 bytes_size = self.__bsize_buffer.pop( __client, 0 )
@@ -181,14 +200,9 @@ class SocketServer:
                 data = recv( bsize, __flags )
                 return Converter( data )
             except BlockingIOError:
-                if __client.blocking:
-                    return None
-                else:
-                    self.__bsize_buffer[ __client ] = bsize
-                    if isinstance( __stuck, Callable ):
-                        return __stuck( recv, bsize, __flags )
-                    else:
-                        return self.__stuck_func( __stuck, recv, bsize, __flags )
+                return self.__save_client( __client, bsize )
+            except SSL.SSLWantReadError:
+                return self.__save_client( __client, bsize )
         else:
             data = recv( __size, __flags )
             return data
@@ -284,24 +298,13 @@ class SocketServer:
             return struct.pack( ">L", __data )
         else:
             return pickle.dumps( __data )
-        
-    def __stuck_func( self, __name: str, __do: Callable, *args: Tuple[ Any ], **kwargs: Dict[ Any, Any ] ) -> Any:
-        __name = __name.lower( )
-        if __name == "wait_for":
-            # __do must is recv or recvfrom
-            while True:
-                try:
-                    data = __do( *args, **kwargs )
-                    return data
-                except BlockingIOError:
-                    continue
-        elif __name == "raise":
-            raise BlockingIOError( "The socket is blocking and the operation would block" )
-        elif __name == "none":
+    
+    def __save_client( self, __client: SSClient, bsize: int ) -> None:
+        if __client.blocking:
             return None
         else:
-            raise ValueError( f"Invalid stuck function name: {__name}" )
-        
+            self.__bsize_buffer[ __client ] = bsize
+    
     def __family_info( self, __family: Union[str, int] ) -> Tuple[ str, int ]:
         """返回family的字符串表示和对应的socket.AF_XXX常量值"""
         family_string = ""
