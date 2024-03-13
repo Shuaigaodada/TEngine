@@ -84,6 +84,7 @@ class TEngine:
         """
         卸载引擎, 退出cbreak和noecho模式, 显示光标。
         """
+        self.stdscr.clear( )
         curses.curs_set(1)
         curses.nocbreak()
         curses.echo()
