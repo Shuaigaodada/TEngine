@@ -90,6 +90,8 @@ class Screen(Component):
     def clear(self, __clear_cmpnt: bool = True) -> None:
         """清空屏幕"""
         self.stdscr.clear()
+        self.stdscr.clrtobot
+        self.stdscr.clrtoeol
         if __clear_cmpnt:
             Text.controller.textList.clear()
         return
