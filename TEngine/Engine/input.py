@@ -1,59 +1,45 @@
 import curses
 from typing import *
-from .mouse import Mouse
-from .component import Component
+from ..components import EngineComponent
+from .mouse import Mouse as MouseInterface
+from ..interfaces import Input as InputInterface
+
 __all__ = ["Input"]
 
-class Input(Component):
+class Input(InputInterface, EngineComponent):
+    __instance: Optional["Input"] = None
+    def __new__(cls, *args, **kwargs) -> "Input":
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+    
     def __init__(self) -> None:
         super().__init__()
-        self.logKeys    : bool              = False
-        self.mouse      : Mouse             = Mouse()
-        self.__is_delay : bool              = False
-        self._buffer    : bytearray         = bytearray()
-        return
+        self.mouse      : MouseInterface = MouseInterface()
+        self._buffer    : bytearray     = bytearray()
+        self.__delay    : bool          = False
     
-    def getch( self, __timeout: float = -1 ) -> int:
-        """获取输入"""
-        self.stdscr.timeout( __timeout * 1000 )
+    def getch(self, __timeout: float = -1) -> int:
+        self.stdscr.timeout( __timeout )
         key = self.stdscr.getch()
-        self.stdscr.timeout( -1 )
-        
-        if self.logger and self.logKeys:
-            self.logger.info(f"Input: {key}")
+        self.stdscr.timeout(-1)
         return key
     
-    def getwch( self, __timeout: float = -1 ) -> str | int:
-        self.stdscr.timeout( __timeout * 1000 )
+    def getwch(self, __timeout: float = -1) -> str:
+        self.stdscr.timeout( __timeout )
         key = self.stdscr.get_wch()
-        self.stdscr.timeout( -1 )
-        
-        if self.logger and self.logKeys:
-            self.logger.info(f"Input: {key}")
-        return key
+        self.stdscr.timeout(-1)
+        return key if not isinstance(key, int) else chr( key )
     
-    def get( self, __timeout: float = -1, encode: str = "utf-8" ) -> str | int:
-        """获取输入, 支持多字节字符, 手动设置编码"""
-        self.stdscr.timeout( __timeout * 1000 )
-        try:
-            bytes_buffer = bytearray( )
-            bytes_buffer += bytes( [self.stdscr.getch( )] )
-            key = bytes_buffer.decode( encode )
-        except UnicodeDecodeError:
-            if self.logger:
-                self.logger.error("Decode Error, Please Check Your Encoding: %s" % encode)
-            return -1
-        except ValueError:
-            return -1
-        finally:
-            self.stdscr.timeout( -1 )
-        
-        if self.logger and self.logKeys:
-            self.logger.info(f"Input: {key}")
-        return key
-    
-    
-    def getline( self, __msg: str = "", exitkey: str | int = "\n", encode: str = 'utf-8', cursor: int = 1, mask: Optional[ str ] = None, clreol: Optional[bool] = True, check: Optional[Callable] = None ) -> str:
+    def getline(self, 
+                __msg: str = "", 
+                *, 
+                quitkey: str = '\n', 
+                coding: str = "utf-8", 
+                cursor: int = 1, 
+                mask: Optional[str] = None, 
+                clreol: Optional[bool] = True, 
+                check: Callable[..., Any] | None = None) -> str:
         """
         获取一行输入, 类似input函数
         
@@ -67,81 +53,80 @@ class Input(Component):
             check: Optional[Callable] = None - 检查函数
         """
         if __msg:
-            self.stdscr.addstr( __msg )
+            self.stdscr.addstr(__msg)
         if not check:
-            check = lambda key, string: True
-
-        string: List[ str ] = [ ]
-        byte_buffer = bytearray( )
-        y, x = self.stdscr.getyx( )
-        index = 0
+            check = lambda k, s: True
         
+        string: List[str] = []
+        bytes_buffer = bytearray()
+        y, x = self.stdscr.getyx()
+        index = 0
         curses.curs_set( cursor )
         
-        __exitkey = exitkey if isinstance( exitkey, int ) else ord( exitkey )
+        quitkey = quitkey if isinstance(quitkey, int) else ord(quitkey)
+        arrow_key = [
+            curses.KEY_LEFT,
+            curses.KEY_RIGHT,
+            curses.KEY_UP,
+            curses.KEY_DOWN
+        ]
+        
         while True:
-            key = self.stdscr.getch( )
-            if key == __exitkey:
+            key = self.stdscr.getch()
+            if key == quitkey:
                 break
             elif key == curses.KEY_BACKSPACE and string and index:
-                if clreol == False: # 如果为False, 则尝试使用空格覆盖, None则不覆盖
-                    self.stdscr.addstr( y, x + index, " " )
-                string.pop( )
+                if not clreol:
+                    self.stdscr.addstr(y, x + index, " ")
+                string.pop(index)
                 index -= 1
-            elif key >= 32 and key <= 126: # 可打印的ASCII字符
-                key = chr( key )
-                if not check( key, string ): continue
-                string.insert( index, key )
+            elif key >= 32 and key <= 126:
+                key = chr(key)
+                if not check(key, string):
+                    continue
+                string.insert(index, key)
                 index += 1
-            else:
-                # 尝试处理多字节字符
-                try:
-                    byte_buffer += bytes( [ key ] )
-                    key = byte_buffer.decode( encode )
-                    if not check( key, string ): continue
-                    string.insert( index, key )
+            elif key in arrow_key:
+                if key == curses.KEY_LEFT and index:
+                    index -= 1
+                elif key == curses.KEY_RIGHT and index < len(string):
                     index += 1
-                    byte_buffer.clear( )  # 清空缓冲区，等待下一个字符
+                elif key == curses.KEY_UP:
+                    index = 0
+                else:
+                    index = len(string)
+            else:
+                try:
+                    bytes_buffer += bytes([key])
+                    key = bytes_buffer.decode(coding)
+                    if not check(key, string):
+                        continue
+                    string.insert(index, key)
+                    index += 1
+                    bytes_buffer.clear()
                 except UnicodeDecodeError:
                     continue
                 except ValueError:
                     continue
             
-            self.stdscr.move( y, x )
-            
+            self.stdscr.move(y, x)
             if clreol:
-                self.stdscr.clrtoeol( )
-            
+                self.stdscr.clrtoeol()
             if mask is not None:
-                self.stdscr.addstr( mask * len( string ) )
+                self.stdscr.addstr(mask * len(string))
             else:
-                self.stdscr.addstr( "".join( string ) )
-            
-            self.stdscr.refresh( )
-        
-        return "".join( string )
-            
-    def decode( self, __key: int, encode: str = "utf-8" ) -> str:
-        """解码"""
-        if __key < 32 or __key > 126:
-            return chr( __key )
-        else:
-            self._buffer += bytes( [__key] )
-            try:
-                return self._buffer.decode( encode )
-            except UnicodeDecodeError:
-                return ""
-            except ValueError:
-                return ""
-
+                self.stdscr.addstr("".join(string))
+            self.stdscr.refresh()
+        return "".join(string)
+                
     @property
     def delay( self ) -> bool:
-        return self.__is_delay
+        return self.__delay
     @delay.setter
     def delay( self, delay: bool ) -> None:
-        self.__is_delay = delay
-        self.stdscr.nodelay( not delay )
-
+        self.__delay = delay
+        curses.curs_set( delay )
+    
     A = ord("a")
     B = ord("b")
     C = ord("c")
@@ -228,3 +213,4 @@ class Input(Component):
 
     SCROLL_UP = 257
     SCROLL_DOWN = 258
+

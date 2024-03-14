@@ -2,10 +2,12 @@ import unicodedata
 from typing import List, Union, Optional
 from ..Engine.clickbox import ClickBox
 from ..interfaces import Text as TextInterfaces
+from ..Engine.mouse import Mouse as MouseInterface
 
 __all__ = [ "Text" ]
 
 class Text( TextInterfaces ):
+    """更好的管理文本"""
     __list: List["Text"] = []
     
     def __new__( cls, *args, **kwargs ) -> "Text":
@@ -23,16 +25,16 @@ class Text( TextInterfaces ):
     def click_box( self ) -> ClickBox:
         return ClickBox( self.__x, self.__y, self.__x + len( self ), self.__y )
 
-    def set_clickbox(self, name: str) -> None:
-        # TODO: 实现鼠标接口，然后实例鼠标并设置点击框
-        # mouse = Mouse( )
-        # box = self.click_box
-        # mouse.set_cb( name, box.x, box.y, box.w, box.h )
-        pass
+    def set_clickbox(self, __name: str) -> None:
+        """给文本设置点击框"""
+        mouse = MouseInterface()
+        box = self.click_box
+        mouse.set_cb( __name, box.x, box.y, box.w, box.h )
     
-    def set_position(self, x: int, y: int) -> None:
-        self.__x = x
-        self.__y = y
+    def set_position(self, __x: int, __y: int) -> None:
+        """设置文本位置"""
+        self.__x = __x
+        self.__y = __y
     
     def __str__( self ) -> str:
         return self.__str
@@ -44,19 +46,21 @@ class Text( TextInterfaces ):
     def __len__( self ) -> int:
         return sum(2 if unicodedata.east_asian_width(c) in 'FW' else 1 for c in self.__str)
     
-    def find(self, item: Union[str, int]) -> Union["Text", List["Text"]]:
-        if isinstance( item, int ):
+    def find(self, __item: Union[str, int]) -> Union["Text", List["Text"]]:
+        """查找文本，可以使用索引或者字符串查找"""
+        if isinstance( __item, int ):
             try:
-                return Text.__list[item]
+                return Text.__list[__item]
             except IndexError as e:
                 raise e
-        elif isinstance( item, str ):
-            return [i for i in Text.__list if item in str(i)]
+        elif isinstance( __item, str ):
+            return [i for i in Text.__list if __item in str(i)]
         else:
             raise ValueError("item must be str or int")
     
-    def findid(self, id: int) -> Optional["Text"]:
+    def findid(self, __id: int) -> Optional["Text"]:
+        """使用id查找文本"""
         for text in Text.__list:
-            if text._id == id:
+            if text._id == __id:
                 return text
         return None

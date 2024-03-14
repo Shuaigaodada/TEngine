@@ -1,102 +1,66 @@
 import curses
-import traceback
-import typing as T
-from .. import dataTypes
-from .component import Component, Text
+from typing import *
+
+from ..components import EngineComponent
+from ..Components.text import Text as TextInterface
+from ..interfaces import Screen as ScreenInterface
 
 __all__ = ["Screen"]
 
-# screen
-class Screen(Component):
+class Screen( ScreenInterface, EngineComponent ):
+    __instance: Optional["Screen"] = None
+    def __new__(cls, *args, **kwargs) -> "Screen":
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+    
     def __init__(self) -> None:
         super().__init__()
-        return
-    
+
     @property
-    def size(self) -> dataTypes.ScreenSize:
-        """ 获取屏幕大小 """
-        return dataTypes.ScreenSize( *list( p - 1 for p in self.stdscr.getmaxyx( ) )[::-1] )
+    def size(self) -> Tuple[int, int]:
+        return self.stdscr.getmaxyx()[::-1]
+    
     @property
     def width(self) -> int:
-        """ 获取屏幕宽度 """
-        return self.size.width
+        return self.size[0]
+    
     @property
     def height(self) -> int:
-        """ 获取屏幕高度 """
-        return self.size.height
-
-    def write(self, string: str | Text, x: int = -1, y: int = -1, color: T.Tuple[int] | int | str = -1) -> Text:
-        """绘制字符"""
-        # 获取颜色的真正值
-        if isinstance(color, tuple) or isinstance(color, list):
-            colorAttrs = color[0]
-            for attr in color[1:]:
-                colorAttrs |= attr
-        elif isinstance(color, str):
-            from .engine import TEngine
-            colorAttrs = TEngine.instance.renderer.getColor(color)
-        else:
-            colorAttrs = color
-        
-        string = string if isinstance( string, Text ) else Text( string )
-        string._id = len(Text.controller.textList)
-        
-        # 如果没有指定位置，直接绘制在当前位置，手动实现printw
-        if x == -1 and y == -1:
-            # 启用颜色
-            if colorAttrs != -1:
-                self.stdscr.attron(colorAttrs)
-            # 获取浮标当前位置
-            y, x = self.stdscr.getyx()
-            string.set_position( x, y )
-            
-            try:
-                # 绘制字符
-                self.stdscr.move( y, x )
-                self.stdscr.addstr( string.__str__() )
-            except curses.error as e:
-            # 如果超出屏幕范围，抛出异常
-                if self.logger is not None:
-                    # 打印或记录错误信息
-                    self.logger.error(e.__str__())
-
-            # 关闭颜色
-            if colorAttrs != -1:
-                self.stdscr.attroff(colorAttrs)
-            return string
-        # 如果指定了位置，直接绘制在指定位置
-        else:
-            # 启用颜色
-            if colorAttrs != -1:
-                self.stdscr.attron(colorAttrs)
-            string.set_position( x, y )
-            # 字符绘制，如果超出屏幕范围，抛出异常
-            try:
-                self.stdscr.addstr( y, x, string.__str__() )
-            except curses.error as e:
-                if self.logger is not None:
-                    # 打印或记录错误信息
-                    self.logger.error(e.__str__())
-                else:
-                    raise e
-                    
-                    
-            # 关闭颜色
-            if colorAttrs != -1:
-                self.stdscr.attroff(colorAttrs)
-            return string
-        
+        return self.size[1]
     
-    def clear(self, __clear_cmpnt: bool = True) -> None:
-        """清空屏幕"""
+    def write(self, 
+              msg: Union[str, TextInterface], 
+              x: Optional[int] = None, 
+              y: Optional[int] = None) -> TextInterface:
+        msg = msg if isinstance(msg, TextInterface) else TextInterface(msg)
+        
+        if x is None and y is None:
+            y, x = self.stdscr.getyx()
+            
+        msg.set_position(x, y)    
+        try:
+            self.stdscr.addstr( y, x, msg.__str__() )
+        except curses.error as e:
+            if self.logger is not None:
+                self.logger.error(e.__str__())
+            else:
+                raise e    
+        return msg
+            
+    def clear(self) -> None:
         self.stdscr.clear()
-        self.stdscr.clrtobot
-        self.stdscr.clrtoeol
-        if __clear_cmpnt:
-            Text.controller.textList.clear()
-        return
+    
+    def clear_line(self, y: int) -> None:
+        self.stdscr.move(y, 0)
+        self.stdscr.clrtoeol()
+        
+    def clrtobot(self) -> None:
+        self.stdscr.clrtobot()
+    
+    def clrtoeol(self) -> None:
+        self.stdscr.clrtoeol()
     
     def update(self) -> None:
-        """更新屏幕"""
-        self.stdscr.refresh()
-        return
+        self.stdscr.refresh( )
+    
