@@ -1,7 +1,7 @@
 import curses
 from typing import *
 
-from ..components import EngineComponent
+from ..engine_component import EngineComponent
 from ..Components.text import Text as IText
 from ..interfaces import Screen as IScreen
 

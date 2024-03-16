@@ -1,10 +1,10 @@
 from .Engine.engine import Engine
 from . import interfaces
-from . import components
+from . import engine_component
 
 
 __all__ = [
     "Engine",
     "interfaces",
-    "components"
+    "engine_component"
 ]
