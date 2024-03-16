@@ -1,6 +1,6 @@
 from typing import *
 from curses import window as cwindow
-from TEngine.Components.filelogger import FileLogger
+from ..Components.filelogger import FileLogger
 
 __all__ = ["EngineComponent"]
 

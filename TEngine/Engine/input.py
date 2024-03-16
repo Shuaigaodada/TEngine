@@ -1,6 +1,6 @@
 import curses
 from typing import *
-from ..engine_component import EngineComponent
+from .engine_component import EngineComponent
 from .mouse import Mouse as IMouse
 from ..interfaces import Input as IInput
 

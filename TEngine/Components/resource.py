@@ -2,7 +2,7 @@ import os
 import json
 import pickle
 
-from ..engine_component import EngineComponent
+from ..Engine.engine_component import EngineComponent
 from ..interfaces import Resource as IResource
 from ..interfaces import FileLoader as IFileLoader
 from typing import *

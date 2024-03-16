@@ -2,7 +2,7 @@ import curses
 from typing import *
 from typing import Iterator
 
-from ..engine_component import EngineComponent
+from .engine_component import EngineComponent
 from ..interfaces import Mouse as IMouse
 from ..Engine.clickbox import ClickBox as IClickBox
 from ..Engine.clickbox import ClickedBox as IClickedBox

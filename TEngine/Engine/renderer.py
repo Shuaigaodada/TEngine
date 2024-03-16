@@ -3,7 +3,7 @@ import curses
 from typing import *
 from typing import Tuple
 
-from ..engine_component import EngineComponent
+from .engine_component import EngineComponent
 from ..interfaces import Renderer as IRenderer
 
 class Renderer( IRenderer, EngineComponent ):
