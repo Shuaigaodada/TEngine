@@ -2,12 +2,11 @@ import json
 import pickle
 import struct
 from typing import *
-from ..interfaces import Converter as ConveterInterface
 from ..interfaces import SSClient as SSClientInterface
+from ..interfaces import Converter as ConveterInterface
+__all__ = ["ConverterInterface"]
 
-__all__ = ["Converter"]
-
-class Converter(ConveterInterface):
+class ConverterInterface(ConveterInterface):
     def __init__(self, __d: bytes, __c: Optional[SSClientInterface] = None) -> None:
         self.client = __c
         self.__data = __d
@@ -32,7 +31,7 @@ class Converter(ConveterInterface):
         return tuple(json.loads(self.__data.decode(coding), *args, **kwargs))
     
     def as_bytes(self) -> bytes:
-        return self.__data
+        return ConverterInterface.encode( self.__data )
     
     def as_string(self, coding: str = "utf-8") -> str:
         return self.__data.decode(coding)
@@ -93,3 +92,16 @@ class Converter(ConveterInterface):
         
     def decode(self, coding: str = "utf-8") -> str:
         return self.__data.decode(coding)
+    
+    @staticmethod
+    def encode(data: Any, coding: str = "utf-8", **kwargs) -> bytes:
+        if isinstance(data, str):   return data.encode(coding)
+        if isinstance(data, bytes):  return data
+        if isinstance(data, int):    return struct.pack(">L", data)
+        if isinstance(data, float):  return struct.pack(">f", data)
+        if isinstance(data, bool):   return struct.pack(">?", data)
+        if isinstance(data, list):   return json.dumps(data, **kwargs).encode(coding)
+        if isinstance(data, tuple):  return json.dumps(data, **kwargs).encode(coding)
+        if isinstance(data, dict):   return json.dumps(data, **kwargs).encode(coding)
+        if isinstance(data, object): return pickle.dumps(data)
+        if isinstance(data, None):   return b""
