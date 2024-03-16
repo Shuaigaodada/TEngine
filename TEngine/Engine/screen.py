@@ -2,19 +2,20 @@ import curses
 from typing import *
 
 from ..components import EngineComponent
-from ..Components.text import Text as TextInterface
-from ..interfaces import Screen as ScreenInterface
+from ..Components.text import Text as IText
+from ..interfaces import Screen as IScreen
 
 __all__ = ["Screen"]
 
-class Screen( ScreenInterface, EngineComponent ):
+class Screen( IScreen, EngineComponent ):
     __instance: Optional["Screen"] = None
     def __new__(cls, *args, **kwargs) -> "Screen":
         if cls.__instance is None:
             cls.__instance = super().__new__(cls)
+            cls.__instance.__init( )
         return cls.__instance
     
-    def __init__(self) -> None:
+    def __init(self) -> None:
         super().__init__()
 
     @property
@@ -30,10 +31,10 @@ class Screen( ScreenInterface, EngineComponent ):
         return self.size[1]
     
     def write(self, 
-              msg: Union[str, TextInterface], 
+              msg: Union[str, IText], 
               x: Optional[int] = None, 
-              y: Optional[int] = None) -> TextInterface:
-        msg = msg if isinstance(msg, TextInterface) else TextInterface(msg)
+              y: Optional[int] = None) -> IText:
+        msg = msg if isinstance(msg, IText) else IText(msg)
         
         if x is None and y is None:
             y, x = self.stdscr.getyx()

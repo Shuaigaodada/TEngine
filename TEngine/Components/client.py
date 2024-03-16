@@ -4,12 +4,12 @@ import socket
 import struct
 from typing import *
 
-from .converter import Converter as ConverterInterface
-from ..interfaces import SocketClient as SocketClientInterface
+from .converter import Converter as IConverter
+from ..interfaces import SocketClient as ISocketClient
 
 __all__ = ['SocketClient']
 
-class SocketClient(SocketClientInterface):
+class SocketClient(ISocketClient):
     def __init__(self, 
                  __host: str, 
                  __port: int, 
@@ -66,7 +66,7 @@ class SocketClient(SocketClientInterface):
              *, 
              timeout: Optional[float] = None, 
              convert: bool = True) -> None:
-        if convert: __d = ConverterInterface.encode( __d )
+        if convert: __d = IConverter.encode( __d )
         send: Callable = self.socket.send if self.proto == "TCP" else self.socket.sendto
 
         self.socket.settimeout( timeout )
@@ -75,7 +75,7 @@ class SocketClient(SocketClientInterface):
         send( __d, __flags )
         self.socket.settimeout( None )
     
-    def recv( self, __size: Optional[int] = None, __flags: int = 0, *, timeout: Optional[float] = None ) -> Optional[ConverterInterface]:
+    def recv( self, __size: Optional[int] = None, __flags: int = 0, *, timeout: Optional[float] = None ) -> Optional[IConverter]:
         recv: Callable = self.socket.recv if self.proto == "TCP" else self.socket.recvfrom
         self.socket.settimeout( timeout )
         if __size is None:
@@ -103,9 +103,9 @@ class SocketClient(SocketClientInterface):
                 except Exception as e:
                     raise e
             self.__size_buffer = -1
-            return ConverterInterface(data)
+            return IConverter(data)
         else:
-            return ConverterInterface(recv( __size, __flags ))
+            return IConverter(recv( __size, __flags ))
     
     def __family__(self, __f: Union[str, int]) -> None:
         """内部方法，用于设置套接字族。

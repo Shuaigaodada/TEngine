@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from ..interfaces import FileLogger as FileLoggerInterfaces
+from ..interfaces import FileLogger as IFileLogger
 
 import os
 import io
@@ -10,20 +10,20 @@ from typing import *
 
 __all__ = [ "FileLogger" ]
 
-class FileLogger( FileLoggerInterfaces ):
+class FileLogger( IFileLogger ):
     """
-    这是一个用于记录日志的类，它是一个单例类，所以你只能创建一个实例。
-    
-    因为在curses中无法将信息输出到控制台, 因此创建FileLogger类来记录日志。 
+        path为日志文件的路径, 如果不指定则会自动创建一个文件名。 
+        open_kwargs为open函数的参数。
     """
 
     __instance: Optional["FileLogger"] = None
-    def __new__(cls, *args, **kwargs) -> "FileLogger":
+    def __new__(cls, path: Optional[str] = None, **open_kwargs: Dict[str, Any]) -> "FileLogger":
         if cls.__instance is None:
             cls.__instance = super().__new__( cls )
+            cls.__instance.init( path, **open_kwargs )
         return cls.__instance
 
-    def __init__(self, path: Optional[str] = None, **open_kwargs: Dict[str, Any]) -> None:
+    def init(self, path: Optional[str] = None, **open_kwargs: Dict[str, Any]) -> None:
         """
         path为日志文件的路径, 如果不指定则会自动创建一个文件名。 
         open_kwargs为open函数的参数。

@@ -1,21 +1,22 @@
 import curses
 from typing import *
 from ..components import EngineComponent
-from .mouse import Mouse as MouseInterface
-from ..interfaces import Input as InputInterface
+from .mouse import Mouse as IMouse
+from ..interfaces import Input as IInput
 
 __all__ = ["Input"]
 
-class Input(InputInterface, EngineComponent):
+class Input(IInput, EngineComponent):
     __instance: Optional["Input"] = None
     def __new__(cls, *args, **kwargs) -> "Input":
         if cls.__instance is None:
             cls.__instance = super().__new__(cls)
+            cls.__instance.__init( )
         return cls.__instance
     
-    def __init__(self) -> None:
+    def __init(self) -> None:
         super().__init__()
-        self.mouse      : MouseInterface = MouseInterface()
+        self.mouse      : IMouse = IMouse()
         self._buffer    : bytearray     = bytearray()
         self.__delay    : bool          = False
     

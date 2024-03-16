@@ -3,13 +3,13 @@ import json
 import pickle
 
 from ..components import EngineComponent
-from ..interfaces import Resource as ResourceInterfaces
-from ..interfaces import FileLoader as FileLoaderInterfaces
+from ..interfaces import Resource as IResource
+from ..interfaces import FileLoader as IFileLoader
 from typing import *
 
 __all__ = [ "Resource", "FileLoader" ]
 
-class FileLoader( FileLoaderInterfaces, EngineComponent ):
+class FileLoader( IFileLoader, EngineComponent ):
     """
     这是一个文件加载器, 用于加载常见文件, 快速返回字符。
     
@@ -58,15 +58,17 @@ class FileLoader( FileLoaderInterfaces, EngineComponent ):
             with open( self.path, "wb" ) as file:
                 pickle.dump( data, file )
 
-class Resource( ResourceInterfaces, EngineComponent ):
-    """资源加载器，快速加载文件，推荐文件在src目录下"""
+class Resource( IResource, EngineComponent ):
+    """srcpath为资源文件夹路径，如果不指定则会自动创建一个文件名。"""
     __instance: Optional["Resource"] = None
-    def __new__(cls, *args, **kwargs) -> "Resource":
+    def __new__(cls, srcpath: Optional[str] = None) -> "Resource":
         if cls.__instance is None:
             cls.__instance = super( ).__new__( cls )
+            cls.__instance.init( srcpath )
         return cls.__instance
     
-    def __init__(self, srcpath: Optional[str] = None) -> None:
+    def init(self, srcpath: Optional[str] = None) -> None:
+        """srcpath为资源文件夹路径，如果不指定则会自动创建一个文件名。"""
         super( ).__init__( )
         # 获取工作路径
         basepath = os.getcwd()

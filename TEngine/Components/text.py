@@ -1,12 +1,12 @@
 import unicodedata
 from typing import List, Union, Optional
 from ..Engine.clickbox import ClickBox
-from ..interfaces import Text as TextInterfaces
-from ..Engine.mouse import Mouse as MouseInterface
+from ..interfaces import Text as IText
+from ..Engine.mouse import Mouse as IMouse
 
 __all__ = [ "Text" ]
 
-class Text( TextInterfaces ):
+class Text( IText ):
     """更好的管理文本"""
     __list: List["Text"] = []
     
@@ -27,7 +27,7 @@ class Text( TextInterfaces ):
 
     def set_clickbox(self, __name: str) -> None:
         """给文本设置点击框"""
-        mouse = MouseInterface()
+        mouse = IMouse()
         box = self.click_box
         mouse.set_cb( __name, box.x, box.y, box.w, box.h )
     

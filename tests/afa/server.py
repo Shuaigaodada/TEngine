@@ -6,8 +6,7 @@ from player import *
 from cardpile import *
 from loguru import logger
 from socket import socket
-from TEngine import Resource
-from TEngine.server import SocketServer, SSClient
+from TEngine.components import Resource, SSClient, SocketServer
 
 __base__ = \
 os.path.join(

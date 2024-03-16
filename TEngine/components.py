@@ -1,6 +1,8 @@
 from typing import *
-from .interfaces import FileLogger
 from curses import window as cwindow
+from TEngine.Components.filelogger import FileLogger
+
+__all__ = ["EngineComponent"]
 
 class EngineComponent:
     def __init__( self, stdscr: Optional[cwindow] = None, logger: Optional[FileLogger] = None ) -> None:

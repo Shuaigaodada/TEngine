@@ -3,23 +3,24 @@ from typing import *
 from typing import Iterator
 
 from ..components import EngineComponent
-from ..interfaces import Mouse as MouseInterface
-from ..Engine.clickbox import ClickBox as ClickBoxInterface
-from ..Engine.clickbox import ClickedBox as ClickedBoxInterface
+from ..interfaces import Mouse as IMouse
+from ..Engine.clickbox import ClickBox as IClickBox
+from ..Engine.clickbox import ClickedBox as IClickedBox
 
 __all__ = ["Mouse"]
 
-class Mouse( MouseInterface, EngineComponent ):
+class Mouse( IMouse, EngineComponent ):
     """鼠标接口，用于管理鼠标事件，点击框等。引擎实例化后，会自动实例化一个鼠标对象。"""
     __instance: Optional["Mouse"] = None
     def __new__(cls, *args, **kwargs) -> "Mouse":
         if cls.__instance is None:
             cls.__instance = super().__new__(cls)
+            cls.__instance.__init( )
         return cls.__instance
 
-    def __init__(self) -> None:
+    def __init(self) -> None:
         super().__init__()
-        self.clickbox: Dict[str, ClickBoxInterface] = {}
+        self.clickbox: Dict[str, IClickBox] = {}
         return
     
     def init(self, interval: int = 0, drag: bool = False) -> None:
@@ -32,13 +33,13 @@ class Mouse( MouseInterface, EngineComponent ):
         """清除所有点击框"""
         self.clickbox.clear()
     
-    def pop_cb(self, name: str) -> ClickBoxInterface:
+    def pop_cb(self, name: str) -> IClickBox:
         """删除点击框并返回点击框对象"""
         return self.clickbox.pop(name)
     
     def set_cb(self, name: str, x: int, y: int, w: int, h: int) -> None:
         """设置点击框"""
-        self.clickbox[name] = ClickBoxInterface(x, y, w, h)
+        self.clickbox[name] = IClickBox(x, y, w, h)
     
     def check(self, x: int, y: int) -> Iterator[str]:
         """检查点击框是否被点击，返回点击的名字"""
@@ -46,7 +47,7 @@ class Mouse( MouseInterface, EngineComponent ):
             if box.check(x, y):
                 yield name
     
-    def get(self) -> ClickedBoxInterface:
+    def get(self) -> IClickedBox:
         """获取鼠标点击的点击框对象"""
         _, mx, my, _, bstate = curses.getmouse()
-        return ClickedBoxInterface(mx, my, bstate, self.check(mx, my))
+        return IClickedBox(mx, my, bstate, self.check(mx, my))

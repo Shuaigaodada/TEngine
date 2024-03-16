@@ -2,12 +2,12 @@ import json
 import pickle
 import struct
 from typing import *
-from ..interfaces import SSClient as SSClientInterface
-from ..interfaces import Converter as ConveterInterface
+from ..interfaces import SSClient as ISSClient
+from ..interfaces import Converter as IConveter
 __all__ = ["Converter"]
 
-class Converter(ConveterInterface):
-    def __init__(self, __d: bytes, __c: Optional[SSClientInterface] = None) -> None:
+class Converter(IConveter):
+    def __init__(self, __d: bytes, __c: Optional[ISSClient] = None) -> None:
         self.client = __c
         self.__data = __d
     

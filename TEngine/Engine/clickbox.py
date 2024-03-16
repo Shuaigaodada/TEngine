@@ -1,11 +1,11 @@
 from typing import Iterator, Tuple
 from .clickstatus import ClickStatus
-from ..interfaces import ClickBox as ClickBoxInterfaces
-from ..interfaces import ClickedBox as ClickedBoxInterfaces
+from ..interfaces import ClickBox as IClickBox
+from ..interfaces import ClickedBox as IClickedBox
 
 __all__ = [ "ClickBox", "ClickedBox" ]
 
-class ClickBox( ClickBoxInterfaces ):
+class ClickBox( IClickBox ):
     def __init__(self, x: int, y: int, w: int, h: int) -> None:
         self.x = x
         self.y = y
@@ -16,7 +16,7 @@ class ClickBox( ClickBoxInterfaces ):
         return self.x <= x <= self.x + self.w and self.y <= y <= self.y + self.h
 
 
-class ClickedBox( ClickedBoxInterfaces ):
+class ClickedBox( IClickedBox ):
     def __init__(self, x: int, y: int, bstate: int, clicked: Iterator[str]) -> None:
         self.x = x
         self.y = y

@@ -4,16 +4,17 @@ from typing import *
 from typing import Tuple
 
 from ..components import EngineComponent
-from ..interfaces import Renderer as RendererInterfaces
+from ..interfaces import Renderer as IRenderer
 
-class Renderer( RendererInterfaces, EngineComponent ):
+class Renderer( IRenderer, EngineComponent ):
     __instance: Optional["Renderer"] = None
     def __new__( cls, *args, **kwargs ) -> "Renderer":
         if cls.__instance is None:
             cls.__instance = super().__new__( cls )
+            cls.__instance.__init( )
         return cls.__instance
     
-    def __init__(self) -> None:
+    def __init(self) -> None:
         super( ).__init__( )
         
         self.cache_color: Dict[str, int]

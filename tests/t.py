@@ -1,18 +1,30 @@
-class TestP:
-    __instance: "TestP" = None
-    def __new__(cls) -> "TestP":
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-        return cls.__instance
-    
-    def __init__(self) -> None:
-        self.x = 15
-        
-class TestC(TestP):
-    def __init__(self) -> None:
-        super().__init__()
-        self.y = 20
+import os
+import sys
 
-f = TestC()
-print(f.x, f.y)
-    
+
+
+__base__ = \
+    os.path.join(
+        os.path.dirname(
+            os.path.abspath(
+                __file__
+            )
+        ),
+        "afa", "src"
+    )
+sys.path.append(
+    os.path.dirname(
+        os.path.dirname(
+            os.path.dirname(
+                __base__
+            )
+        )
+    )
+)
+from TEngine.Components.resource import Resource
+
+Resource( __base__ )
+resource = Resource()
+print(resource)
+print(resource.srcpath)
+

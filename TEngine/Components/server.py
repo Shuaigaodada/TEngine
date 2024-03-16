@@ -3,24 +3,37 @@ import socket
 import struct
 from typing import *
 from .ssclient import SSClient
-from .converter import Converter as ConverterInterface
-from ..interfaces import SocketServer as SocketServerInterface
+from .converter import Converter as IConverter
+from ..interfaces import SocketServer as ISocketServer
 
 
-class SocketServer( SocketServerInterface ):
+class SocketServer( ISocketServer ):
+    """初始化SocketServer实例，设置服务器的地址、端口、协议族和协议类型。
+        
+        参数:
+            __addr: 服务器绑定的IP地址。
+            __port: 服务器绑定的端口号。
+            family: 套接字族（默认IPv4）。
+            proto: 使用的协议（默认TCP）。
+    """
     __instance: Optional["SocketServer"] = None
     
-    def __new__( cls, *args, **kwargs ) -> "SocketServer":
-        """实现SocketServer作为单例类，确保整个应用中只有一个SocketServer实例。
-        
-        返回:
-            SocketServer的单一实例。
-        """
+    def __new__( cls,  
+                __addr: str, 
+                __port: int, 
+                *, 
+                family: Union[str, int] = "IPv4", 
+                proto: Union[str, int] = "TCP" ) -> "SocketServer":
         if cls.__instance is None:
             cls.__instance = super().__new__( cls )
+            cls.__instance.init(
+                __addr, __port,
+                family = family,
+                proto = proto
+            )
         return cls.__instance
     
-    def __init__(self, 
+    def init(self, 
                  __addr: str, 
                  __port: int, 
                  *, 
@@ -201,7 +214,7 @@ class SocketServer( SocketServerInterface ):
             accepted_clients.append(self.accept( timeout = timeout )[0])
         return accepted_clients
 
-    def recv_from(self, __c: SSClient, __size: Optional[int] = None, __flag: int = 0) -> Optional[ConverterInterface]:
+    def recv_from(self, __c: SSClient, __size: Optional[int] = None, __flag: int = 0) -> Optional[IConverter]:
         """从指定的客户端接收数据。
         
         参数:
@@ -229,18 +242,18 @@ class SocketServer( SocketServerInterface ):
             except Exception as e:          raise e
             
             try:
-                return ConverterInterface( recv( bsize, __flag ) )
+                return IConverter( recv( bsize, __flag ) )
             except BlockingIOError:         return self.__savebs__( __c, bsize )
             except ssl.SSLWantReadError:    return self.__savebs__( __c, bsize )
             except Exception as e:          raise e
         else:
             try:
-                return ConverterInterface( recv( __size, __flag ) )
+                return IConverter( recv( __size, __flag ) )
             except BlockingIOError:         return None
             except ssl.SSLWantReadError:    return None
             except Exception as e:          raise e
 
-    def recv(self, __count: int, __size: Optional[int] = None, __flag: int = 0, *, once: bool = False, without: Optional[List[SSClient]] = None) -> Optional[ConverterInterface]:
+    def recv(self, __count: int, __size: Optional[int] = None, __flag: int = 0, *, once: bool = False, without: Optional[List[SSClient]] = None) -> Optional[IConverter]:
         """接收所有client的数据
         
         参数:
@@ -251,7 +264,7 @@ class SocketServer( SocketServerInterface ):
         返回:
             接收到的数据，封装在ConverterInterfac对象中。
         """
-        all_data: List[ConverterInterface] = []
+        all_data: List[IConverter] = []
         self.set_blocking( False )
         clients = self.clients.copy( )
         
@@ -282,7 +295,7 @@ class SocketServer( SocketServerInterface ):
         """
         if __c not in self.clients:
             raise ValueError( f"Client not found: {__c}" )
-        if convert: __d = ConverterInterface.encode( __d )
+        if convert: __d = IConverter.encode( __d )
         
         bsize = struct.pack( self.bsize_fmt, len(__d) )
         try:

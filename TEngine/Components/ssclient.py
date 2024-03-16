@@ -1,15 +1,15 @@
 import socket
 from typing import *
 from ssl import SSLContext
-from ..interfaces import SSClient as SSClientInterface
-from ..interfaces import Converter as ConverterInterface
-from ..interfaces import SocketServer as SocketServerInterface
+from ..interfaces import SSClient as ISSClient
+from ..interfaces import Converter as IConverter
+from ..interfaces import SocketServer as ISocketServer
 
-class SSClient( SSClientInterface ):
+class SSClient( ISSClient ):
     def __init__(self, 
                  __client: socket.socket, 
                  __addr: Tuple[str, int], 
-                 __serv: SocketServerInterface, 
+                 __serv: ISocketServer, 
                  __ssl: bool = False, /, 
                  context: Optional[SSLContext] = None, 
                  **warp_kwargs: Dict[str, Any]) -> None:
@@ -23,13 +23,13 @@ class SSClient( SSClientInterface ):
             self.socket = context.wrap_socket( self.socket, server_side = True, **warp_kwargs )
     
     @property
-    def connected(self) -> SocketServerInterface:
+    def connected(self) -> ISocketServer:
         return self.__server
 
     def send(self, data: Any, __flag: int = 0, *, convert: bool = True) -> None:
         self.__server.send_to( self.socket, data, __flag, convert = convert )
 
-    def recv(self, __size: int | None = None, __flag: int = 0) -> Optional[ConverterInterface]:
+    def recv(self, __size: int | None = None, __flag: int = 0) -> Optional[IConverter]:
         return self.__server.recv_from( self.socket, __size, __flag )
     
     def disconnect(self) -> None:
