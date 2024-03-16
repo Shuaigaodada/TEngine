@@ -21,7 +21,7 @@ sys.path.append(
         )
     )
 )
-from TEngine.Components.resource import Resource
+from TEngine.components import Resource
 
 Resource( __base__ )
 resource = Resource()
