@@ -4,9 +4,9 @@ import struct
 from typing import *
 from ..interfaces import SSClient as SSClientInterface
 from ..interfaces import Converter as ConveterInterface
-__all__ = ["ConverterInterface"]
+__all__ = ["Converter"]
 
-class ConverterInterface(ConveterInterface):
+class Converter(ConveterInterface):
     def __init__(self, __d: bytes, __c: Optional[SSClientInterface] = None) -> None:
         self.client = __c
         self.__data = __d
@@ -31,7 +31,7 @@ class ConverterInterface(ConveterInterface):
         return tuple(json.loads(self.__data.decode(coding), *args, **kwargs))
     
     def as_bytes(self) -> bytes:
-        return ConverterInterface.encode( self.__data )
+        return Converter.encode( self.__data )
     
     def as_string(self, coding: str = "utf-8") -> str:
         return self.__data.decode(coding)

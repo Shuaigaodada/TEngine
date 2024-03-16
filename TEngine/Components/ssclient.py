@@ -5,7 +5,7 @@ from ..interfaces import SSClient as SSClientInterface
 from ..interfaces import Converter as ConverterInterface
 from ..interfaces import SocketServer as SocketServerInterface
 
-class SSClientInterface( SSClientInterface ):
+class SSClient( SSClientInterface ):
     def __init__(self, 
                  __client: socket.socket, 
                  __addr: Tuple[str, int], 
@@ -39,7 +39,7 @@ class SSClientInterface( SSClientInterface ):
     def __hash__(self) -> int:
         return hash( self.socket )
     
-    def __eq__(self, other: Union["SSClientInterface", socket.socket, str]) -> bool:
+    def __eq__(self, other: Union["SSClient", socket.socket, str]) -> bool:
         other = self.__server.find( other )
         return self.socket == other.socket
     

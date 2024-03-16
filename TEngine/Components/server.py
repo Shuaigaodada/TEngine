@@ -2,8 +2,8 @@ import ssl
 import socket
 import struct
 from typing import *
-from .ssclient import SSClientInterface
-from .converter import ConverterInterface
+from .ssclient import SSClient
+from .converter import Converter as ConverterInterface
 from ..interfaces import SocketServer as SocketServerInterface
 
 
@@ -43,8 +43,8 @@ class SocketServer( SocketServerInterface ):
         self.__proto        : Optional[int]     = None
         self.__binded       : bool              = False
         
-        self.clients        : List[SSClientInterface] = {}
-        self.__bsize_buffer : Dict[SSClientInterface, int] = {}
+        self.clients        : List[SSClient] = {}
+        self.__bsize_buffer : Dict[SSClient, int] = {}
         
         self.__family__( family )
         self.__proto__( proto )
@@ -56,7 +56,7 @@ class SocketServer( SocketServerInterface ):
         
         self.__wrap_kwargs  : Dict[str, Any]    = {}
 
-    def find(self, __noc: Union[SSClientInterface, str, int, socket.socket]) -> SSClientInterface:
+    def find(self, __noc: Union[SSClient, str, int, socket.socket]) -> SSClient:
         """根据不同的标识符（名称、索引、SSClient实例或套接字）查找并返回对应的客户端实例。
         
         参数:
@@ -76,7 +76,7 @@ class SocketServer( SocketServerInterface ):
             raise ValueError( f"Client not found: {__noc}" )
         elif isinstance( __noc, int ):
             return self.clients[__noc]
-        elif isinstance( __noc, SSClientInterface ):
+        elif isinstance( __noc, SSClient ):
             return __noc
         elif isinstance( __noc, socket.socket ):
             for client in self.clients:
@@ -86,7 +86,7 @@ class SocketServer( SocketServerInterface ):
         else:
             raise TypeError( f"Unknow type: {type(__noc).__name__}" )
     
-    def rm_client(self, __noc: Union[SSClientInterface, str, socket.socket]) -> None:
+    def rm_client(self, __noc: Union[SSClient, str, socket.socket]) -> None:
         """移除一个指定的客户端。
         
         参数:
@@ -96,7 +96,7 @@ class SocketServer( SocketServerInterface ):
         client.disconnect()
         self.clients.remove( client )
     
-    def rename(self, __noc: Union[SSClientInterface, str, socket.socket], __name: str) -> None:
+    def rename(self, __noc: Union[SSClient, str, socket.socket], __name: str) -> None:
         """给指定的客户端重命名。
         
         参数:
@@ -161,7 +161,7 @@ class SocketServer( SocketServerInterface ):
             self.bind()
         self.socket.listen( __backlog )
     
-    def accept(self, __name: Optional[str] = None, *, timeout: Optional[float] = None) -> Tuple[SSClientInterface, str, str]:
+    def accept(self, __name: Optional[str] = None, *, timeout: Optional[float] = None) -> Tuple[SSClient, str, str]:
         """接受一个连接，并返回一个SSClient实例及其地址和分配的名称。
         
         参数:
@@ -179,14 +179,14 @@ class SocketServer( SocketServerInterface ):
         if __name is None: __name = "client-" + str(len(self.clients))
         
         self.socket.settimeout( None )
-        client = SSClientInterface(
+        client = SSClient(
             client, addr, self,
             self.ssl, self.context, **self.__wrap_kwargs
         )
         self.clients.append( client )
         return client, addr, __name
 
-    def accept_for(self, __c: int, *, timeout: Optional[float] = None) -> List[SSClientInterface]:
+    def accept_for(self, __c: int, *, timeout: Optional[float] = None) -> List[SSClient]:
         """接受指定数量的连接。
         
         参数:
@@ -201,7 +201,7 @@ class SocketServer( SocketServerInterface ):
             accepted_clients.append(self.accept( timeout = timeout )[0])
         return accepted_clients
 
-    def recv_from(self, __c: SSClientInterface, __size: Optional[int] = None, __flag: int = 0) -> Optional[ConverterInterface]:
+    def recv_from(self, __c: SSClient, __size: Optional[int] = None, __flag: int = 0) -> Optional[ConverterInterface]:
         """从指定的客户端接收数据。
         
         参数:
@@ -210,7 +210,7 @@ class SocketServer( SocketServerInterface ):
             __flag: 接收操作的标志。
             
         返回:
-            接收到的数据，封装在Converter对象中。
+            接收到的数据，封装在ConverterInterfac对象中。
         """
         if __c not in self.clients:
             raise ValueError( f"Client not found: {__c}" )
@@ -240,7 +240,7 @@ class SocketServer( SocketServerInterface ):
             except ssl.SSLWantReadError:    return None
             except Exception as e:          raise e
 
-    def recv(self, __count: int, __size: Optional[int] = None, __flag: int = 0, *, once: bool = False, without: Optional[List[SSClientInterface]] = None) -> Optional[ConverterInterface]:
+    def recv(self, __count: int, __size: Optional[int] = None, __flag: int = 0, *, once: bool = False, without: Optional[List[SSClient]] = None) -> Optional[ConverterInterface]:
         """接收所有client的数据
         
         参数:
@@ -249,7 +249,7 @@ class SocketServer( SocketServerInterface ):
             once: 是否只接收一次。
             
         返回:
-            接收到的数据，封装在Converter对象中。
+            接收到的数据，封装在ConverterInterfac对象中。
         """
         all_data: List[ConverterInterface] = []
         self.set_blocking( False )
@@ -268,7 +268,7 @@ class SocketServer( SocketServerInterface ):
         self.set_blocking( True )
         return all_data
     
-    def send_to(self, __c: SSClientInterface, __d: Any, __flag: int = 0, *, convert: bool = True) -> None:
+    def send_to(self, __c: SSClient, __d: Any, __flag: int = 0, *, convert: bool = True) -> None:
         """向指定的客户端发送数据。
 
         参数:
@@ -291,7 +291,7 @@ class SocketServer( SocketServerInterface ):
         except Exception as e: raise e
         return
         
-    def send( self, __d: Any, __flag: int = 0, *, convert: bool = True, without: Optional[List[SSClientInterface]] = None ) -> None:
+    def send( self, __d: Any, __flag: int = 0, *, convert: bool = True, without: Optional[List[SSClient]] = None ) -> None:
         """向所有客户端发送数据，可选择排除某些客户端。
 
         参数:
