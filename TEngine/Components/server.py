@@ -269,6 +269,17 @@ class SocketServer( SocketServerInterface ):
         return all_data
     
     def send_to(self, __c: SSClientInterface, __d: Any, __flag: int = 0, *, convert: bool = True) -> None:
+        """向指定的客户端发送数据。
+
+        参数:
+            __c: 目标客户端。
+            __d: 要发送的数据，可以是任意类型，如果convert为True，则数据将被转换为bytes。
+            __flag: 发送操作的标志（socket模块中的标志）。
+            convert: 是否自动将数据转换为bytes。
+
+        抛出:
+            ValueError: 如果客户端不在服务器的客户端列表中。
+        """
         if __c not in self.clients:
             raise ValueError( f"Client not found: {__c}" )
         if convert: __d = ConverterInterface.encode( __d )
@@ -281,6 +292,17 @@ class SocketServer( SocketServerInterface ):
         return
         
     def send( self, __d: Any, __flag: int = 0, *, convert: bool = True, without: Optional[List[SSClientInterface]] = None ) -> None:
+        """向所有客户端发送数据，可选择排除某些客户端。
+
+        参数:
+            __d: 要发送的数据。
+            __flag: 发送操作的标志。
+            convert: 是否将数据转换为bytes。
+            without: 需要排除的客户端列表。
+
+        返回:
+            无。
+        """
         clients = self.clients.copy( )
         for wc in without or []:
             clients.remove( wc )
@@ -289,16 +311,29 @@ class SocketServer( SocketServerInterface ):
         return
     
     def set_blocking(self, __status: bool) -> None:
+        """设置所有客户端的阻塞模式。
+
+        参数:
+            __status: True设置为阻塞模式，False设置为非阻塞模式。
+        """
         for client in self.clients:
             client.blocking = __status
     
     def close(self) -> None:
+        """关闭服务器，断开所有客户端连接并关闭服务器套接字。"""
         for client in self.clients:
             try:                client.disconnect( )
             except Exception:   continue
         try:                   self.socket.shutdown( )
         except Exception:      pass
         finally:               self.socket.close( )
+    
+    def __enter__(self) -> "SocketServer":
+        """支持上下文管理器协议，允许使用with语句管理资源。"""
+        return self
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        """上下文管理器退出时，关闭服务器资源。"""
+        self.close( )
     
     def __family__(self, __f: Union[str, int]) -> None:
         """内部方法，用于设置套接字族。
