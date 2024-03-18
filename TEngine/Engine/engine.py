@@ -9,12 +9,10 @@ from ..Components.filelogger import FileLogger as IFileLogger
 from ..interfaces import Engine as IEngine
 
 class Engine(IEngine):
-    __instance: Optional["Engine"] = None
-    def __new__(cls, *args, **kwargs) -> "Engine":
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-            cls.__instance.__init( )
-        return cls
+    def __new__(cls, *args, **kwargs):
+        instance = super().__new__(cls)
+        instance.__init()
+        return instance
     
     def __init(self) -> None:
         self.stdscr: Optional[curses.window] = None
@@ -43,6 +41,7 @@ class Engine(IEngine):
         curses.noecho           ( )
         curses.cbreak           ( )
         curses.curs_set         ( 0 )
+        curses.start_color      ( )
         self.stdscr.keypad      ( True )
         if __reg:
             atexit.register     ( self.quit )

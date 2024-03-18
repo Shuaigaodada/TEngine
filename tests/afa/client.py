@@ -4,9 +4,9 @@ import json
 import const
 import unicodedata
 from typing import *
-from TEngine import TEngine
-from TEngine import Resource
-from TEngine.client import SocketClient
+from TEngine import Engine
+from TEngine.components import Resource
+from TEngine.components import SocketClient
 
 host = "localhost"
 port = 9999
@@ -91,9 +91,8 @@ class Role:
                 for char in self.name
         )
     
-class Game( TEngine ):
+class Game( Engine ):
     def __init__( self, *args, **kwargs ):
-        super( ).__init__( *args, **kwargs )
         self.client = SocketClient( host, port )
         self.resource = Resource(
             os.path.join(
@@ -106,9 +105,9 @@ class Game( TEngine ):
             )
         )
         cert = self.resource.load( "ssl_cert/cert.pem" ).path
-        self.client.create_SSL( cert, wrap_kwargs={"server_hostname": host} )
+        self.client.createSSL( cert, wrap_kwargs={"server_hostname": host} )
         self.client.connect( )
-        self._init( )
+        self.init_engine( )
         self.create_color( )
         self.player: Player = None
         self.buyCardKeys = [ str( idx ) for idx in range( 1, 6 ) ]
@@ -153,12 +152,12 @@ class Game( TEngine ):
                     elif "player" in click_name.split( "-" ):
                         idx = int( click_name.split( "-" )[ 1 ] )
                         self.post( sell=idx )
-                        self.input.mouse.clear_clickbox( )
+                        self.input.mouse.clear_cb( )
                 continue
             
             
         self.client.close( )
-        self.exit( )
+        self.quit( )
             
     def draw( self ) -> None:
         if self.player is None:
@@ -191,7 +190,7 @@ class Game( TEngine ):
             self.screen.write( card.name, draw_pos[ idx - 1 ], self.height ) \
                 .set_clickbox( "role-" + str( idx ) )
             
-            self.renderer.end( )
+            self.renderer.stop( )
             
         return
     
@@ -210,7 +209,7 @@ class Game( TEngine ):
             click_box1 = \
             self.screen.write( card.name, offset, drawline ).click_box
             
-            self.renderer.end( )
+            self.renderer.stop( )
             
             # draw star
             star_pos = offset + card.name_lenght // 2
@@ -219,8 +218,8 @@ class Game( TEngine ):
             click_box2 = \
             self.screen.write( const.star * card.level, star_pos, drawline - 1 ).click_box
             
-            self.renderer.end( )
-            self.input.mouse.set_clickbox( "player-" + str( idx ), *(click_box1 + click_box2).unpack( ) )
+            self.renderer.stop( )
+            self.input.mouse.set_cb( "player-" + str( idx ), *(click_box1 + click_box2).unpack( ) )
             offset += card.name_lenght + 2
         return
     
@@ -258,7 +257,7 @@ class Game( TEngine ):
                         position = draw_pos[ pos ] + len( name ) - ( level - 1 )
                         self.screen.write( const.star * level, position, self.height - 1 )
                     
-                    self.renderer.end( "star-" + str( level ) )
+                    self.renderer.stop( "star-" + str( level ) )
                         
 
     def create_ui( self, player: Player ) -> List[ str ]:
@@ -304,3 +303,4 @@ class Game( TEngine ):
          
 if __name__ == "__main__":
     Game( ).run( )
+    

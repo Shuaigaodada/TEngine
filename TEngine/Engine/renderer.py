@@ -17,19 +17,10 @@ class Renderer( IRenderer, EngineComponent ):
     def __init(self) -> None:
         super( ).__init__( )
         
-        self.cache_color: Dict[str, int]
-        self.pairs      : Dict[str, int]
-        self.index      : int
-        self.oncolor    : List[int]
-        
-        if self.cache_color is None:
-            self.cache_color = {}
-        if self.pairs is None:
-            self.pairs = {}
-        if self.index is None:
-            self.index = 1
-        if self.oncolor is None:
-            self.oncolor = []
+        self.cache_color        : Dict[str, int]    = {}
+        self.pairs              : Dict[str, int]    = {}
+        self.index              : int               = 1
+        self.oncolor            : List[int]         = []
     
     def create(self, name: str, fg: str, bg: str = "#000000") -> None:
         fgcolor = self.push_cache( fg )
@@ -86,3 +77,11 @@ class Renderer( IRenderer, EngineComponent ):
         G = int(G * 1000 / 255)
         B = int(B * 1000 / 255)
         return R, G, B
+
+    BOLD = curses.A_BOLD
+    DIM = curses.A_DIM
+    REVERSE = curses.A_REVERSE
+    BLINK = curses.A_BLINK
+    UNDERLINE = curses.A_UNDERLINE
+    STANDOUT = curses.A_STANDOUT
+    NORMAL = curses.A_NORMAL

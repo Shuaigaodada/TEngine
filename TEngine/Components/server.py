@@ -56,7 +56,7 @@ class SocketServer( ISocketServer ):
         self.__proto        : Optional[int]     = None
         self.__binded       : bool              = False
         
-        self.clients        : List[SSClient] = {}
+        self.clients        : List[SSClient]    = []
         self.__bsize_buffer : Dict[SSClient, int] = {}
         
         self.__family__( family )
@@ -145,12 +145,15 @@ class SocketServer( ISocketServer ):
             checkhost: 是否检查主机名。
             **context_kwargs: 其他SSL上下文配置选项。
         """
-        if not context_kwargs:
-            context_kwargs = { "purpose": ssl.Purpose.CLIENT_AUTH }
-        self.context = ssl.create_default_context( **context_kwargs )
-        self.context.load_cert_chain( certfile = __cf, keyfile = __kf )
-        self.context.check_hostname = checkhost
-        self.ssl = True
+        try:
+            if not context_kwargs:
+                context_kwargs = { "purpose": ssl.Purpose.CLIENT_AUTH }
+            self.context = ssl.create_default_context( **context_kwargs )
+            self.context.load_cert_chain( certfile = __cf, keyfile = __kf )
+            self.context.check_hostname = checkhost
+            self.ssl = True
+        except FileNotFoundError as e:
+            raise FileNotFoundError( f"SSL file not found: {e.filename}\ncerfile: {__cf}\nkeyfile: {__kf}" )
     
     def bind(self, __addr: Optional[str] = None, __port: Optional[int] = None) -> None:
         """绑定套接字到指定的地址和端口。
@@ -164,7 +167,7 @@ class SocketServer( ISocketServer ):
         self.socket.bind( (address, port) )
         self.__binded = True
     
-    def listen( self, __backlog: int ) -> None:
+    def listen( self, __backlog: int = -1 ) -> None:
         """开始监听入站连接。
         
         参数:
@@ -253,7 +256,7 @@ class SocketServer( ISocketServer ):
             except ssl.SSLWantReadError:    return None
             except Exception as e:          raise e
 
-    def recv(self, __count: int, __size: Optional[int] = None, __flag: int = 0, *, once: bool = False, without: Optional[List[SSClient]] = None) -> Optional[IConverter]:
+    def recv(self, __count: int, __size: Optional[int] = None, __flag: int = 0, *, once: bool = False, without: Optional[List[SSClient]] = None) -> List[IConverter]:
         """接收所有client的数据
         
         参数:

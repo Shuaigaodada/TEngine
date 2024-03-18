@@ -1,6 +1,6 @@
-from .Engine.engine import Engine
 from . import interfaces
 from .Engine import engine_component
+from .Engine.engine import Engine
 
 
 __all__ = [

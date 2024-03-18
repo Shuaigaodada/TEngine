@@ -17,7 +17,7 @@ class FileLoader( IFileLoader, EngineComponent ):
     """
     
     def __init__( self, path: str ) -> None:
-        super( ).__init__( )
+        super( ).__init__( path )
         self.path = path
         self.coding = "utf-8"
         return
@@ -64,10 +64,10 @@ class Resource( IResource, EngineComponent ):
     def __new__(cls, srcpath: Optional[str] = None) -> "Resource":
         if cls.__instance is None:
             cls.__instance = super( ).__new__( cls )
-            cls.__instance.init( srcpath )
+            cls.__instance.__init( srcpath )
         return cls.__instance
     
-    def init(self, srcpath: Optional[str] = None) -> None:
+    def __init(self, srcpath: Optional[str] = None) -> None:
         """srcpath为资源文件夹路径，如果不指定则会自动创建一个文件名。"""
         super( ).__init__( )
         # 获取工作路径
@@ -86,17 +86,14 @@ class Resource( IResource, EngineComponent ):
         # 分割文件路径
         dirs = path.split( "/" )
         # 如果文件路径中有多个文件夹，那么需要逐个检查文件夹是否存在，如果不存在则创建
-        if len( dirs ) > 1:
-            path = self.srcpath
+        if len( dirs ) > 1 and existok:
+            check_path = self.srcpath
             for dir in dirs[:-1]:
-                path = os.path.join( path, dir )
-                if not os.path.exists( path ):
-                    if not existok:
-                        raise FileNotFoundError( f"File path {path} not exists" )
-                    os.makedirs( path )
-            # 恢复文件路径
-            path = dirs
-        path = os.path.join( self.srcpath, path )
+                check_path = os.path.join( check_path, dir )
+                if not os.path.exists( check_path ):
+                    os.makedirs( check_path )
+
+        path = os.path.join( self.srcpath, *dirs )
         if existok and not os.path.exists( path ):
             open( path, "a" ).close( )
         return FileLoader( path )

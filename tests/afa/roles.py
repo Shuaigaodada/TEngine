@@ -1,8 +1,8 @@
 import os
 import env
 from typing import *
-from TEngine import Resource
 import unicodedata as _ucdata
+from TEngine.components import Resource
 
 __all__ = ['Role']
 ChEnRoleNames: Dict[str, str] = None
@@ -99,7 +99,7 @@ class Role:
         if ChEnRoleNames is None:
             basePath = os.path.dirname(__file__)
             srcPath = os.path.join(basePath, 'src')
-            ChEnRoleNames = Resource(srcPath).load("TranslateNames.json").asJson()    
+            ChEnRoleNames = Resource(srcPath).load("TranslateNames.json").as_json()    
         
         try:
             name = roleName if type(roleName) is str else roleName.name

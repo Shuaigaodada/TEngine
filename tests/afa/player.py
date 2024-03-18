@@ -4,8 +4,8 @@ import const
 from roles import *
 from typing import *
 from cardpile import *
-from TEngine import Resource
-from TEngine.server import SSClient
+from TEngine.components import Resource
+from TEngine.components import SSClient
 
 class Player:
     def __eq__( self, other: Union["Player", SSClient] ):
@@ -35,7 +35,7 @@ class Player:
         
         self.cardPile       : Dict[int, Role] = { 1: None, 2: None, 3: None, 4: None, 5: None }
         self.globalCardPile : CardPile          = globalCardPile
-        self.levelExp       : Dict[str, int]  = Resource.Load( const.file_levelexp ).asJson()
+        self.levelExp       : Dict[str, int]  = Resource().load( const.file_levelexp ).as_json()
         
         # int level exp keys
         self.levelExp = { int(k): v for k, v in self.levelExp.items() }

@@ -5,8 +5,7 @@ from typing import *
 from player import *
 from cardpile import *
 from loguru import logger
-from socket import socket
-from TEngine.Engine.engine_component import Resource, SSClient, SocketServer
+from TEngine.components import Resource, SSClient, SocketServer
 
 __base__ = \
 os.path.join(
@@ -34,7 +33,7 @@ def main( *args, **kwargs ):
     
     cert = resource.load( "ssl_cert/cert.pem" ).path
     key  = resource.load( "ssl_cert/key.pem" ) .path
-    server.create_SSL( cert, key )
+    server.createSSL( cert, key )
     
     logger.info( "start afa server" )
     server.listen( )
@@ -56,7 +55,7 @@ def main( *args, **kwargs ):
     
     
     logger.info( "waiting for clients ready" )
-    for data in server.recv( len( players ), client_once=True ):
+    for data in server.recv( len( players ), once=True ):
         if not data.as_bool( ):
             raise Exception( "client not ready" )
     
@@ -70,7 +69,7 @@ def main( *args, **kwargs ):
     while players:
         poster = server.recv( 1 )[ 0 ]        
         post = poster.as_json( )
-        logger.info( f"post: {post}" )
+        logger.info( f"{poster.client.peername[0]}:{poster.client.peername[1]} post: {post}" )
         """
         post数据:
         {

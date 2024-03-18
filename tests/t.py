@@ -1,30 +1,16 @@
-import os
-import sys
+class TestA:
+    def __new__(cls):
+        instance = super().__new__(cls)
+        instance.__init()
+        return instance
+    def __init(self):
+        self.a = 15
 
+    def __init__(self) -> None:
+        pass
 
+class TestB(TestA):
+    def run(self):
+        print(self.a)
 
-__base__ = \
-    os.path.join(
-        os.path.dirname(
-            os.path.abspath(
-                __file__
-            )
-        ),
-        "afa", "src"
-    )
-sys.path.append(
-    os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(
-                __base__
-            )
-        )
-    )
-)
-from TEngine.components import Resource
-
-Resource( __base__ )
-resource = Resource()
-print(resource)
-print(resource.srcpath)
-
+TestB().run()

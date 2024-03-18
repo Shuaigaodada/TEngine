@@ -3,7 +3,7 @@ import const
 import random
 from roles import *
 from typing import *
-from TEngine import Resource
+from TEngine.components import Resource
 
 
 __all__ = ['CardPile']
@@ -35,9 +35,10 @@ class CardPile:
         self.init()
         
     def init(self) -> None:
-        self.__prob             = Resource.Load( const.file_prob ).asJson   (  )
-        roles                   = Resource.Load( const.file_role ).asLines  (  )
-        counts                  = Resource.Load( const.file_count ).asString(  )
+        resource = Resource()
+        self.__prob             = resource.load( const.file_prob ).as_json   (  )
+        roles                   = resource.load( const.file_role ).as_lines  (  )
+        counts                  = resource.load( const.file_count ).as_string(  )
         
         
         counts = list(map(int, counts.split(",")))
