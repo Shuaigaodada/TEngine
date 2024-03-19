@@ -1,4 +1,4 @@
-from typing import Iterator, Tuple
+from typing import List, Tuple
 from .clickstatus import ClickStatus
 from ..interfaces import ClickBox as IClickBox
 from ..interfaces import ClickedBox as IClickedBox
@@ -13,64 +13,76 @@ class ClickBox( IClickBox ):
         self.h = h
     
     def check(self, x: int, y: int) -> bool:
-        return self.x <= x <= self.x + self.w and self.y <= y <= self.y + self.h
+        return self.x <= x <= self.w and self.y <= y <= self.h
+    
+    def __add__(self, other: "ClickBox") -> "ClickBox":
+        x = min(self.x, other.x)
+        y = min(self.y, other.y)
+        w = max(self.x + self.w, other.x + other.w) - x
+        h = max(self.y + self.h, other.y + other.h) - y
+        return ClickBox(x, y, w, h)
+    
+    @property
+    def tuple(self) -> Tuple[int, int, int, int]:
+        return (self.x, self.y, self.w, self.h)
+    
 
 
 class ClickedBox( IClickedBox ):
-    def __init__(self, x: int, y: int, bstate: int, clicked: Iterator[str]) -> None:
+    def __init__(self, x: int, y: int, bstate: int, clicked_name: List[str]) -> None:
         self.x = x
         self.y = y
         self.bstate = bstate
-        self.clicked = clicked
+        self.clicked_names = clicked_name
         
-        self.pressed                : Tuple[str] = ( )
-        self.clicked                : Tuple[str] = ( )
-        self.released               : Tuple[str] = ( )
-        self.doubleClicked          : Tuple[str] = ( )
-        self.tripleClicked          : Tuple[str] = ( )
-        self.rightPressed           : Tuple[str] = ( )
-        self.rightClicked           : Tuple[str] = ( )
-        self.rightDoubleClicked     : Tuple[str] = ( )
-        self.rightTripleClicked     : Tuple[str] = ( )
-        self.middlePressed          : Tuple[str] = ( )
-        self.middleClicked          : Tuple[str] = ( )
-        self.middleDoubleClicked    : Tuple[str] = ( )
-        self.middleTripleClicked    : Tuple[str] = ( )
+        self.pressed                : List[str] = [ ]
+        self.clicked                : List[str] = [ ]
+        self.released               : List[str] = [ ]
+        self.doubleClicked          : List[str] = [ ]
+        self.tripleClicked          : List[str] = [ ]
+        self.rightPressed           : List[str] = [ ]
+        self.rightClicked           : List[str] = [ ]
+        self.rightDoubleClicked     : List[str] = [ ]
+        self.rightTripleClicked     : List[str] = [ ]
+        self.middlePressed          : List[str] = [ ]
+        self.middleClicked          : List[str] = [ ]
+        self.middleDoubleClicked    : List[str] = [ ]
+        self.middleTripleClicked    : List[str] = [ ]
         
-        self.draging                : Tuple[str] = ( )
+        self.draging                : List[str] = [ ]
         
         self.init()
     
     def init(self) -> None:
-        for name in self.clicked:
+        for name in self.clicked_names:
             if self.bstate & ClickStatus.PRESSED:
-                self.pressed += (name, )
+                self.pressed.append(name)
             if self.bstate & ClickStatus.CLICKED:
-                self.clicked += (name, )
+                self.clicked.append(name)
             if self.bstate & ClickStatus.RELEASED:
-                self.released += (name, )
+                self.released.append(name)
             if self.bstate & ClickStatus.DOUBLE_CLICKED:
-                self.doubleClicked += (name, )
+                self.doubleClicked.append(name)
             if self.bstate & ClickStatus.TRIPLE_CLICKED:
-                self.tripleClicked += (name, )
+                self.tripleClicked.append(name)
             if self.bstate & ClickStatus.RIGHT_PRESSED:
-                self.rightPressed += (name, )
+                self.rightPressed.append(name)
             if self.bstate & ClickStatus.RIGHT_CLICKED:
-                self.rightClicked += (name, )
+                self.rightClicked.append(name)
             if self.bstate & ClickStatus.RIGHT_DOUBLE_CLICKED:
-                self.rightDoubleClicked += (name, )
+                self.rightDoubleClicked.append(name)
             if self.bstate & ClickStatus.RIGHT_TRIPLE_CLICKED:
-                self.rightTripleClicked += (name, )
+                self.rightTripleClicked.append(name)
             if self.bstate & ClickStatus.MIDDLE_PRESSED:
-                self.middlePressed += (name, )
+                self.middlePressed.append(name)
             if self.bstate & ClickStatus.MIDDLE_CLICKED:
-                self.middleClicked += (name, )
+                self.middleClicked.append(name)
             if self.bstate & ClickStatus.MIDDLE_DOUBLE_CLICKED:
-                self.middleDoubleClicked += (name, )
+                self.middleDoubleClicked.append(name)
             if self.bstate & ClickStatus.MIDDLE_TRIPLE_CLICKED:
-                self.middleTripleClicked += (name, )
+                self.middleTripleClicked.append(name)
             
             if self.bstate & ClickStatus.DRAGING:
-                self.draging += (name, )
+                self.draging.append(name)
         return
 
