@@ -26,14 +26,14 @@ class SocketServer( ISocketServer ):
                 proto: Union[str, int] = "TCP" ) -> "SocketServer":
         if cls.__instance is None:
             cls.__instance = super().__new__( cls )
-            cls.__instance.init(
+            cls.__instance.__init(
                 __addr, __port,
                 family = family,
                 proto = proto
             )
         return cls.__instance
     
-    def init(self, 
+    def __init(self, 
                  __addr: str, 
                  __port: int, 
                  *, 
@@ -68,6 +68,8 @@ class SocketServer( ISocketServer ):
         self.bsize_fmt      : str               = ">L"
         
         self.__wrap_kwargs  : Dict[str, Any]    = {}
+        
+        self.set_opt( socket.SOL_SOCKET, socket.SO_REUSEADDR, True )
 
     def find(self, __noc: Union[SSClient, str, int, socket.socket]) -> SSClient:
         """根据不同的标识符（名称、索引、SSClient实例或套接字）查找并返回对应的客户端实例。
@@ -228,8 +230,7 @@ class SocketServer( ISocketServer ):
         返回:
             接收到的数据，封装在ConverterInterfac对象中。
         """
-        if __c not in self.clients:
-            raise ValueError( f"Client not found: {__c}" )
+        if __c not in self.clients: return None
         recv: Callable = __c.socket.recv if self.proto == "TCP" else __c.socket.recvfrom
         if __size is None:
             try:
@@ -240,7 +241,14 @@ class SocketServer( ISocketServer ):
             except BlockingIOError:         return None
             except ssl.SSLWantReadError:    return None
             except struct.error:
-                bsize = self.__bsize_buffer.pop( __c )
+                try:    bsize = self.__bsize_buffer.pop( __c )
+                except KeyError:
+                    # here client maybe raise some error and disconnect, but bytes size buffer didn't remove
+                    # TODO: log client disconnect error and make sure it is client problem
+                    self.clients.remove( __c )
+                    return None 
+                
+                    
                 if not bsize: return None
             except Exception as e:          raise e
             
@@ -276,8 +284,10 @@ class SocketServer( ISocketServer ):
         
         while len( all_data ) < __count:
             for client in clients:
+                if len( all_data ) >= __count: break
                 data = self.recv_from( client, __size, __flag )
                 if data is not None:
+                    data.client = client
                     all_data.append( data )
                     if once: clients.remove( client )
         
@@ -407,4 +417,13 @@ class SocketServer( ISocketServer ):
             raise TypeError( f"Invalid protocol type: {type(__p)}" )
         self.proto = proto_str
         self.__proto = __p
+    
+    def __savebs__( self, __c: SSClient, __bsize: int ) -> None:
+        """内部方法，用于保存接收到的数据大小。
         
+        参数:
+            __c: 客户端实例。
+            __bsize: 数据大小。
+        """
+        self.__bsize_buffer[__c] = __bsize
+        return None
