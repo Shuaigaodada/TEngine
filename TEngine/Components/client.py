@@ -46,18 +46,21 @@ class SocketClient(ISocketClient):
         context.load_verify_locations( __cf, **locations_kwargs )
         self.socket = context.wrap_socket( self.socket, **wrap_kwargs )
     
-    def connect(self, __timeout: Optional[float] = None, retry: int = 3) -> None:
-        self.socket.settimeout( __timeout )
-        for try_count in range( retry ):
+    def connect(self, __retry: Optional[int] = None, *, timeout: Optional[int] = None) -> None:
+        self.socket.settimeout( timeout )
+        try_count = 0
+        while True:
             try:
                 self.socket.connect( (self.host, self.port) )
                 break
             except Exception as e:
-                if try_count == retry - 1:
-                    raise e
-                else:
+                if __retry is None:
                     time.sleep( 1 )
-                    continue
+                else:
+                    try_count += 1
+                    if try_count >= __retry:
+                        raise e
+                    time.sleep( 1 )
         self.socket.settimeout( None )
     
     def send(self, 
