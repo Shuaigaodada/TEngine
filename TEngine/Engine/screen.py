@@ -20,7 +20,12 @@ class Screen( IScreen, EngineComponent ):
 
     @property
     def size(self) -> Tuple[int, int]:
-        return self.stdscr.getmaxyx()[::-1]
+        return tuple(
+            map(
+                lambda n: n - 1,
+                self.stdscr.getmaxyx()[::-1]
+                )
+            )
     
     @property
     def width(self) -> int:
@@ -41,7 +46,8 @@ class Screen( IScreen, EngineComponent ):
             
         msg.set_position(x, y)    
         try:
-            self.stdscr.addstr( y, x, msg.__str__() )
+            self.stdscr.move(y, x)
+            self.stdscr.addstr( msg.__str__() )
         except curses.error as e:
             if self.logger is not None:
                 self.logger.error(e.__str__())
@@ -52,14 +58,20 @@ class Screen( IScreen, EngineComponent ):
     def clear(self) -> None:
         self.stdscr.clear()
     
-    def clear_line(self, y: int) -> None:
-        self.stdscr.move(y, 0)
-        self.stdscr.clrtoeol()
+    def move(self, __x: int, __y: int) -> None:
+        self.stdscr.move(__y, __x)
         
-    def clrtobot(self) -> None:
+    def clrtobot(self, __x: Optional[int] = None, __y: Optional[int] = None) -> None:
+        """`clear to bottom`清除从光标当前位置到屏幕底部的所有行。"""
+        if __x is not None and __y is not None:
+            self.stdscr.move(__y, __x)
         self.stdscr.clrtobot()
+        
     
-    def clrtoeol(self) -> None:
+    def clrtoeol(self, __x: Optional[int] = None, __y: Optional[int] = None) -> None:
+        """`clear to end of line`清除从光标当前位置到行尾的所有字符。"""
+        if __x is not None and __y is not None:
+            self.stdscr.move(__y, __x)
         self.stdscr.clrtoeol()
     
     def update(self) -> None:
