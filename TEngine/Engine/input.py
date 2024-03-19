@@ -82,8 +82,8 @@ class Input(IInput, EngineComponent):
                 coding: str = "utf-8", 
                 cursor: int = 1, 
                 mask: Optional[str] = None, 
-                clreol: Optional[bool] = True, 
-                check: Callable[..., Any] | None = None) -> str:
+                clreol: Optional[bool] = True,
+                command: Dict[Union[Tuple[int], int], Callable[..., int]]) -> str:
         """
         获取一行输入, 类似input函数
         
@@ -94,12 +94,15 @@ class Input(IInput, EngineComponent):
             cursor: int = 1     - 光标
             mask: Optional[str] = None - 掩码
             clreol: Optional[bool] = True - 是否清除行( False将为尝试使用空格覆盖, 若不想覆盖任何字符, 请使用None )
-            check: Optional[Callable] = None - 检查函数
         """
         if __msg:
             self.stdscr.addstr(__msg)
-        if not check:
-            check = lambda k, s: True
+        if not command: command = {}
+        else:
+            for key, cmd in command.items():
+                if isinstance(key, list):
+                    command.pop(key)
+                    command[tuple(key)] = cmd
         
         string: List[str] = []
         bytes_buffer = bytearray()
@@ -122,36 +125,48 @@ class Input(IInput, EngineComponent):
             elif key == curses.KEY_BACKSPACE and string and index:
                 if not clreol:
                     self.stdscr.addstr(y, x + index, " ")
-                string.pop(index)
+                string.pop(index - 1)
                 index -= 1
             elif key >= 32 and key <= 126:
                 key = chr(key)
-                if not check(key, string):
-                    continue
                 string.insert(index, key)
                 index += 1
             elif key in arrow_key:
-                if key == curses.KEY_LEFT and index:
+                if key == curses.KEY_LEFT and index - 1 >= 0:
                     index -= 1
                 elif key == curses.KEY_RIGHT and index < len(string):
                     index += 1
                 elif key == curses.KEY_UP:
                     index = 0
-                else:
+                elif key == curses.KEY_DOWN:
                     index = len(string)
             else:
-                try:
-                    bytes_buffer += bytes([key])
-                    key = bytes_buffer.decode(coding)
-                    if not check(key, string):
+                # get keys buffer
+                self.stdscr.nodelay(1)
+                keys = [key]
+                while True:
+                    key = self.stdscr.getch()
+                    if key == -1: break
+                    keys.append(key)
+                self.stdscr.nodelay(0)
+                command_called = False
+                for key, cmd in command.items():
+                    if key in keys:
+                        index = cmd(string, index)
+                        command_called = True
+                
+                if not command:
+                    # decode keys buffer
+                    try:
+                        bytes_buffer += bytes(keys)
+                        key = bytes_buffer.decode(coding)
+                        string.insert(index, key)
+                        index += 1
+                        bytes_buffer.clear()
+                    except UnicodeDecodeError:
                         continue
-                    string.insert(index, key)
-                    index += 1
-                    bytes_buffer.clear()
-                except UnicodeDecodeError:
-                    continue
-                except ValueError:
-                    continue
+                    except ValueError:
+                        continue
             
             self.stdscr.move(y, x)
             if clreol:
@@ -161,6 +176,7 @@ class Input(IInput, EngineComponent):
             else:
                 self.stdscr.addstr("".join(string))
             self.stdscr.refresh()
+            self.stdscr.move(y, x + index)
         return "".join(string)
                 
     @property
