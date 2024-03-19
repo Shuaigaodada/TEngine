@@ -41,11 +41,13 @@ class Mouse( IMouse, EngineComponent ):
         """设置点击框"""
         self.clickbox[name] = IClickBox(x, y, w, h)
     
-    def check(self, x: int, y: int) -> Iterator[str]:
+    def check(self, x: int, y: int) -> List[str]:
         """检查点击框是否被点击，返回点击的名字"""
+        clicked = []
         for name, box in self.clickbox.items():
             if box.check(x, y):
-                yield name
+                clicked.append(name)
+        return clicked
     
     def get(self) -> IClickedBox:
         """获取鼠标点击的点击框对象"""
