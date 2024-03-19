@@ -83,7 +83,8 @@ class Input(IInput, EngineComponent):
                 cursor: int = 1, 
                 mask: Optional[str] = None, 
                 clreol: Optional[bool] = True,
-                command: Dict[Union[Tuple[int], int], Callable[..., int]]) -> str:
+                command: Optional[Dict[Union[Tuple[int], int], Callable[..., int]]] = None
+                ) -> str:
         """
         获取一行输入, 类似input函数
         
@@ -94,6 +95,7 @@ class Input(IInput, EngineComponent):
             cursor: int = 1     - 光标
             mask: Optional[str] = None - 掩码
             clreol: Optional[bool] = True - 是否清除行( False将为尝试使用空格覆盖, 若不想覆盖任何字符, 请使用None )
+            command: Optional[Dict[Union[Tuple[int], int], Callable[..., int]]] = None - 指令集，键为按键，值为函数，允许为tuple为键，会读取所有缓冲区的按键然后对比key
         """
         if __msg:
             self.stdscr.addstr(__msg)

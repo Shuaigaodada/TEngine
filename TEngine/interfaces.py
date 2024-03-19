@@ -110,7 +110,8 @@ class Input:
                 cursor: int = 1, 
                 mask: Optional[str] = None, 
                 clreol: Optional[bool] = True, 
-                check: Optional[Callable] = None ) -> str: ...
+                command: Optional[Dict[Union[Tuple[int], int], Callable[..., int]]] = None
+                ) -> str: ...
     def inputbox( self,
                  x: int,
                  y: int,
