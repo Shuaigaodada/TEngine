@@ -60,26 +60,16 @@ class Converter(IConveter):
         return struct.unpack(__format, self.__data)[0]
     
     def As(self, __t: type, coding: str = "utf-8") -> Union[int, float]:
-        if isinstance(__t, str):
-            return self.as_string(coding)
-        elif isinstance(__t, int):
-            return self.as_int()
-        elif isinstance(__t, float):
-            return self.as_float()
-        elif isinstance(__t, bool):
-            return self.as_bool()
-        elif isinstance(__t, bytes):
-            return self.as_bytes()
-        elif isinstance(__t, list):
-            return self.as_list(coding)
-        elif isinstance(__t, tuple):
-            return self.as_tuple(coding)
-        elif isinstance(__t, dict):
-            return self.as_json(coding)
-        elif isinstance(__t, object):
-            return self.as_object(__t)
-        else:
-            return self.as_pickle()
+        if type(__t) is str:        return self.as_string(coding)
+        elif type(__t) is int:      return self.as_int()
+        elif type(__t) is float:    return self.as_float()
+        elif type(__t) is bool:     return self.as_bool()
+        elif type(__t) is bytes:    return self.as_bytes()
+        elif type(__t) is list:     return self.as_list(coding)
+        elif type(__t) is tuple:    return self.as_tuple(coding)
+        elif type(__t) is dict:     return self.as_json(coding)
+        elif type(__t) is object:   return self.as_object(__t)
+        else:                       return self.as_pickle()
     
     def as_pickle(self, *args, **kwargs) -> Any:
         return pickle.loads(self.__data, *args, **kwargs)
@@ -95,13 +85,12 @@ class Converter(IConveter):
     
     @staticmethod
     def encode(data: Any, coding: str = "utf-8", **kwargs) -> bytes:
-        if isinstance(data, str):   return data.encode(coding)
-        if isinstance(data, bytes):  return data
-        if isinstance(data, int):    return struct.pack(">L", data)
-        if isinstance(data, float):  return struct.pack(">f", data)
-        if isinstance(data, bool):   return struct.pack(">?", data)
-        if isinstance(data, list):   return json.dumps(data, **kwargs).encode(coding)
-        if isinstance(data, tuple):  return json.dumps(data, **kwargs).encode(coding)
-        if isinstance(data, dict):   return json.dumps(data, **kwargs).encode(coding)
-        if isinstance(data, object): return pickle.dumps(data)
-        if isinstance(data, None):   return b""
+        if type(data) == str:       return data.encode(coding)
+        elif type(data) == bytes:   return data
+        elif type(data) == int:     return struct.pack(">L", data)
+        elif type(data) == float:   return struct.pack(">f", data)
+        elif type(data) == bool:    return struct.pack(">?", data)
+        elif type(data) in (list, tuple, dict): return json.dumps(data, **kwargs).encode(coding)
+        
+        if isinstance(data, object):return pickle.dumps(data)
+        if data is None:            return b""
