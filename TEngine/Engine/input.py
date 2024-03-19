@@ -149,24 +149,21 @@ class Input(IInput, EngineComponent):
                     if key == -1: break
                     keys.append(key)
                 self.stdscr.nodelay(0)
-                command_called = False
                 for key, cmd in command.items():
                     if key in keys:
                         index = cmd(string, index)
-                        command_called = True
                 
-                if not command:
-                    # decode keys buffer
-                    try:
-                        bytes_buffer += bytes(keys)
-                        key = bytes_buffer.decode(coding)
-                        string.insert(index, key)
-                        index += 1
-                        bytes_buffer.clear()
-                    except UnicodeDecodeError:
-                        continue
-                    except ValueError:
-                        continue
+                # try decode keys buffer
+                try:
+                    bytes_buffer += bytes(keys)
+                    key = bytes_buffer.decode(coding)
+                    string.insert(index, key)
+                    index += 1
+                    bytes_buffer.clear()
+                except UnicodeDecodeError:
+                    continue
+                except ValueError:
+                    continue
             
             self.stdscr.move(y, x)
             if clreol:
