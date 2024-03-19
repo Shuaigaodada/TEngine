@@ -1,18 +1,13 @@
-try:
-    from cryptography import x509
-    from cryptography.x509.oid import NameOID
-    from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography.hazmat.primitives.serialization import BestAvailableEncryption, Encoding, PrivateFormat, NoEncryption
-    from cryptography.hazmat.backends import default_backend
-    import typing as T
-    import datetime
-except ImportError:
-    print("Please install the cryptography module using 'pip install cryptography'")
-    exit(1)
-except ModuleNotFoundError:
-    print("Please install the cryptography module using 'pip install cryptography'")
-    exit(1)
+# must install cryptography
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.serialization import BestAvailableEncryption, Encoding, PrivateFormat, NoEncryption
+from cryptography.hazmat.backends import default_backend
+import typing as T
+import datetime
+
 from ..interfaces import CryptCreator as ICryptCreator
 
 class CryptCreator(ICryptCreator):

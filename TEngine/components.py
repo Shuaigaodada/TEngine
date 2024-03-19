@@ -5,8 +5,12 @@ from .Components.server import SocketServer
 from .Components.client import SocketClient
 from .Components.converter import Converter
 from .Components.filelogger import FileLogger
-from .Components.cryptcreator import CryptCreator
 from .Components.resource import Resource, FileLoader
+
+try:
+    from .Components.cryptcreator import CryptCreator
+except ModuleNotFoundError:
+    pass
 
 __all__ = [
     "Text",
