@@ -67,18 +67,12 @@ class Resource( IResource, EngineComponent ):
             cls.__instance.__init( srcpath )
         return cls.__instance
     
-    def __init(self, srcpath: Optional[str] = None) -> None:
+    def __init(self, srcpath: str) -> None:
         """srcpath为资源文件夹路径，如果不指定则会自动创建一个文件名。"""
         super( ).__init__( )
-        # 获取工作路径
-        basepath = os.getcwd()
         # 修正斜杠
-        srcpath = srcpath.replace( "/", os.sep )
-        # 判断是否是绝对路径
-        if srcpath.startswith( os.sep ):
-            self.srcpath = srcpath
-        else:
-            self.srcpath = os.path.join( basepath, srcpath )
+        self.srcpath = os.path.abspath( srcpath )
+        self.srcpath = srcpath.replace( "/", os.sep )
         return
 
     def load(self, path: str, existok: bool = False) -> FileLoader:
