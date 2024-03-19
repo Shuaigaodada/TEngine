@@ -1,3 +1,4 @@
+import time
 import curses
 from typing import *
 from .engine_component import EngineComponent
@@ -19,11 +20,53 @@ class Input(IInput, EngineComponent):
         self.mouse      : IMouse = IMouse()
         self._buffer    : bytearray     = bytearray()
         self.__delay    : bool          = False
+        self.key_buffer : List[int]     = []
+        self.__allow    : bool          = True
+        self.__timer    : float         = -1
+        self.__clrbuffer: bool          = True
+        self.init()        
+    
+    def wait( self, __ms: int, __kc: int, *, without: Optional[List[int]] = None, clrbuffer: bool = True ) -> None:
+        """
+        简单的输入控制器，防止用户长按键盘导致的输入过快
+        
+        参数:
+            __ms: int - 毫秒
+            __kc: int - 允许的按键数量
+            without: Optional[List[int]] = None - 排除的按键
+        """
+        self.__clrbuffer = clrbuffer
+        if self.__timer == -1:
+            self.__timer = time.time()
+        
+        for key in without or []:
+            if key in self.key_buffer:
+                self.key_buffer.remove( key )
+        
+        curtime = time.time()
+        total_time = curtime - self.__timer
+        if curtime - self.__timer >= __ms / 1000:
+            self.__allow = True
+            self.__timer = -1
+            self.key_buffer.clear()
+            return
+        
+        if len(self.key_buffer) >= __kc:
+            self.__allow = False
+        
     
     def getch(self, __timeout: float = -1) -> int:
+        if not self.__allow:
+            if self.__clrbuffer:
+                self.stdscr.nodelay(1)
+                while self.stdscr.getch() != -1: pass
+                return -1
+            return -1
         self.stdscr.timeout( __timeout )
         key = self.stdscr.getch()
         self.stdscr.timeout(-1)
+        self.key_buffer.append( key )
+        
         return key
     
     def getwch(self, __timeout: float = -1) -> str:
@@ -185,6 +228,7 @@ class Input(IInput, EngineComponent):
     PAGE_UP     = None
     PAGE_DOWN   = None
     MOUSE_KEY   = None
+    RESIZE      = curses.KEY_RESIZE
     SHIFT_A = ord("A")
     SHIFT_B = ord("B")
     SHIFT_C = ord("C")
