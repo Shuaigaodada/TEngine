@@ -84,13 +84,32 @@ class Converter(IConveter):
         return self.__data.decode(coding)
     
     @staticmethod
-    def encode(data: Any, coding: str = "utf-8", **kwargs) -> bytes:
+    def encode(data: Type[Any], coding: str = "utf-8", **kwargs) -> bytes:
         if type(data) == str:       return data.encode(coding)
         elif type(data) == bytes:   return data
         elif type(data) == int:     return struct.pack(">L", data)
         elif type(data) == float:   return struct.pack(">f", data)
         elif type(data) == bool:    return struct.pack(">?", data)
         elif type(data) in (list, tuple, dict): return json.dumps(data, **kwargs).encode(coding)
-        
         if isinstance(data, object):return pickle.dumps(data)
         if data is None:            return b""
+
+    @staticmethod
+    def enobject( __obj: object,
+                    *,
+                    indent: Optional[int] = 4,
+                    __decode: bool = False,
+                    coding: str = "utf-8",
+                    **kwargs) -> bytes:
+        obj_json = {}
+        for key, val in __obj.__dict__.items( ):
+            if key.startswith( "__" ): continue
+            if isinstance(val, object):
+                obj_json[key] = Converter.enobject( val, __decode = True )
+            obj_json[key] = val
+        
+        _json = json.dumps( obj_json, indent=indent, **kwargs )
+        return _json.encode( coding ) if __decode else _json    
+    
+            
+    
