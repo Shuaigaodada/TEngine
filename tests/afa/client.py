@@ -6,6 +6,7 @@ import unicodedata
 from typing import *
 from TEngine import Engine
 from TEngine.components import Resource
+from TEngine.components import FileLogger
 from TEngine.components import SocketClient
 
 host = "localhost"
@@ -40,9 +41,9 @@ class Player:
         
         self.draw_pos       : List[ int ]       = post_data.get( "draw_pos" )
         
-        self._init( )
+        self.init( )
     
-    def _init( self ) -> None:
+    def init( self ) -> None:
         self.cards = [ Role( card ) for card in self.cards ]
         self.cardPile = { int( idx ): (Role( card ) if card is not None else None) for idx, card in self.cardPile.items( ) }
     
@@ -111,6 +112,8 @@ class Game( Engine ):
         self.create_color( )
         self.player: Player = None
         self.buyCardKeys = [ str( idx ) for idx in range( 1, 6 ) ]
+        self.__last_line = 2
+        self.logger = FileLogger(self.resource.load("logs/client.log", existok=True).path)
 
     def run( self ):
         self.client.send( READY )
@@ -121,14 +124,17 @@ class Game( Engine ):
         self.input.mouse.init( )
         self.post( )
         while True:
-            # sort player's card and get player's information
             self.draw( )
-            
             key = self.input.getch( )
-            
+                        
             if key == self.input.Q:
                 self.post( exit=True )
                 break
+            
+            elif key == self.input.RESIZE:
+                # reset screen
+                self.screen.clear()
+                continue
             
             elif chr( key ) in self.buyCardKeys:
                 self.post( buy=int( chr( key ) ) )
@@ -153,6 +159,7 @@ class Game( Engine ):
                         idx = int( click_name.split( "-" )[ 1 ] )
                         self.post( sell=idx )
                         self.input.mouse.clear_cb( )
+                        continue
                 continue
             
             
@@ -162,10 +169,10 @@ class Game( Engine ):
     def draw( self ) -> None:
         if self.player is None:
             raise ValueError( "player info is empty" )
-        self.screen.clear( )
-        self.screen.write( const.title )
+        self.screen.write( const.title, 0, 0 )
         # draw ui
         for idx, UI in enumerate( self.create_ui( self.player ) ):
+            self.screen.clrtoeol(0, self.height - 2 - idx)
             self.screen.write( UI, 0, self.height - 2 - idx )
 
         self.draw_clientCardPile( )
@@ -175,6 +182,7 @@ class Game( Engine ):
         self.screen.update( )
         
     def draw_clientCardPile( self ) -> None:
+        self.screen.clrtoeol(0, self.height)
         self.screen.write( const.currentPlayerPile, 0, self.height )
         draw_pos = self.player.draw_pos
         
@@ -195,14 +203,19 @@ class Game( Engine ):
         return
     
     def draw_clientCards( self ) -> None:
-        self.screen.write( const.currentPlayerCards, 3, 0 )
+        self.screen.write( const.currentPlayerCards, 0, 3 )
         offset = len( const.currentPlayerCards ) + 6
         drawline = 3
+        
+        for line in range( self.__last_line ):
+            self.screen.clrtoeol( offset, drawline + line - 1 )
         
         for idx, card in enumerate( self.player.cards ):
             if offset + card.name_lenght >= self.width - 5:
                 offset = len( const.currentPlayerCards ) + 6
                 drawline += 2
+                if drawline > self.__last_line:
+                    self.__last_line += 2
             
             self.renderer.start( "cost-" + str( card.cost ) )
             
@@ -219,7 +232,7 @@ class Game( Engine ):
             self.screen.write( const.star * card.level, star_pos, drawline - 1 ).click_box
             
             self.renderer.stop( )
-            self.input.mouse.set_cb( "player-" + str( idx ), *(click_box1 + click_box2).unpack( ) )
+            self.input.mouse.set_cb( "player-" + str( idx ), *(click_box1 + click_box2).tuple )
             offset += card.name_lenght + 2
         return
     
@@ -227,6 +240,7 @@ class Game( Engine ):
         counter     = self.player.counter( )
         cardpile    = list( self.player.cardPile.values( ) )
         draw_pos    = self.player.draw_pos
+        self.screen.clrtoeol(0, self.height - 1)
         
         pile_count: Dict[ str, int ] = { } # role_name: count
         

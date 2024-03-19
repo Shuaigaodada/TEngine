@@ -42,6 +42,8 @@ class Player:
         self.client = client
         
         self.__offset_list: List[ int ] = [ ]
+        self.population = 1
+        self.preparation = 9
         
     def as_json( self ) -> Dict[ str, Any ]:
         """
@@ -62,7 +64,9 @@ class Player:
             "WLInterest": self.WLInterest,
             "cardPile": self.cardPile,
             "cards": self.cards,
-            "draw_pos": self.get_drawpos( )
+            "draw_pos": self.get_drawpos( ),
+            "population": self.population,
+            "preparation": self.preparation
         }
         """
         return {
@@ -82,7 +86,9 @@ class Player:
             "WLInterest": { str(c): curc for c, curc in self.WLInterest.items( ) },
             "cardPile": { str( idx ): (card.as_json() if card is not None else None) for idx, card in self.cardPile.items( ) },
             "cards": [card.as_json() for card in self.cards],
-            "draw_pos": self.get_drawpos( )
+            "draw_pos": self.get_drawpos( ),
+            "population": self.population,
+            "preparation": self.preparation
         }
         
     def get_drawpos( self ) -> List[ int ]:
@@ -109,13 +115,30 @@ class Player:
         self.coin += price
         self.globalCardPile.push( *count )
         
+    def check_buystar( self, card: Role ) -> bool:
+        counter     = self.cardCount( )
+        cardpile    = list( self.cardPile.values( ) )        
+        pile_count: Dict[ str, int ] = { } # role_name: count
         
+        # 将卡牌对中的卡牌数量统计
+        for card in cardpile:
+            if card is not None:
+                pile_count[ card.name ] = pile_count.get( card.name, 0 ) + 1
         
+        for name, count in pile_count.items( ):
+            if self.checkCard( name ):
+                if count + counter[name].get( 1, 0 ) >= 3:
+                    return True
+        return False
     
     def buyCard(self, index: int, free: bool = False) -> None:
         """购买卡牌"""
         if self.cardPile[ index ] is None:
             return
+        if len(self.cards) >= self.population + self.preparation:
+            if self.cardPile.get( index ) is not None:
+                if self.check_buystar( self.cardPile[ index ] ):
+                    
         
         card_cost = self.cardPile[ index ].cost if not free else 0
         
@@ -132,6 +155,7 @@ class Player:
         if self.exp >= self.levelExp[ self.level ]:
             self.exp -= self.levelExp[ self.level ]
             self.level += 1
+            self.population += 1
             self.upgrade( free, True )
             
         if __checkgrade: return
