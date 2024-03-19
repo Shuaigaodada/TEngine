@@ -31,22 +31,30 @@ class Renderer( IRenderer, EngineComponent ):
         self.index += 1
         return
     
-    def start(self, *__name: Tuple[str]) -> None:
+    def start(self, *__name: Tuple[Union[str, int]]) -> None:
         for pair_name in __name:
-            pair = self.pairs.get( pair_name )
-            cpair = curses.color_pair( pair )
-            self.stdscr.attron( cpair )
-            self.oncolor.append( pair_name )
+            if isinstance( pair_name, int ):
+                self.stdscr.attron( pair_name )
+                self.oncolor.append( pair_name )
+            else:
+                pair = self.pairs.get( pair_name )
+                cpair = curses.color_pair( pair )
+                self.stdscr.attron( cpair )
+                self.oncolor.append( pair_name )
 
-    def stop(self, *__name: Tuple[str]) -> None:
+    def stop(self, *__name: Tuple[str, int]) -> None:
         if not __name:
             __name = self.oncolor
         
         for pair_name in __name:
-            pair = self.pairs.get( pair_name )
-            cpair = curses.color_pair( pair )
-            self.stdscr.attroff( cpair )
-            self.oncolor.remove( pair_name )
+            if isinstance(pair_name, int):
+                self.stdscr.attroff( pair_name )
+                self.oncolor.remove( pair_name )
+            else:
+                pair = self.pairs.get( pair_name )
+                cpair = curses.color_pair( pair )
+                self.stdscr.attroff( cpair )
+                self.oncolor.remove( pair_name )
     
     def save(self, __path: str) -> None:
         with open( __path, "w" ) as fp:
