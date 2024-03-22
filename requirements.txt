@@ -1,1 +1,2 @@
 windows-curses==2.3.2
+wcwidth==0.2.13
