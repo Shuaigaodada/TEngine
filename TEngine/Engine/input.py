@@ -1,5 +1,6 @@
 import time
 import curses
+import wcwidth
 from typing import *
 from .engine_component import EngineComponent
 from .mouse import Mouse as IMouse
@@ -82,8 +83,8 @@ class Input(IInput, EngineComponent):
                 coding: str = "utf-8", 
                 cursor: int = 1, 
                 mask: Optional[str] = None, 
-                clreol: Optional[bool] = True,
-                command: Optional[Dict[Union[Tuple[int], int], Callable[..., int]]] = None
+                clear: Optional[Callable[..., None]] = None,
+                command: Optional[Dict[Union[Tuple[int], int], Callable[..., Tuple[int, int]]]] = None
                 ) -> str:
         """
         获取一行输入, 类似input函数
@@ -96,9 +97,11 @@ class Input(IInput, EngineComponent):
             mask: Optional[str] = None - 掩码
             clreol: Optional[bool] = True - 是否清除行( False将为尝试使用空格覆盖, 若不想覆盖任何字符, 请使用None )
             command: Optional[Dict[Union[Tuple[int], int], Callable[..., int]]] = None - 指令集，键为按键，值为函数，允许为tuple为键，会读取所有缓冲区的按键然后对比key
+        注释: 此函数不为不兼容unicode的终端提供支持
         """
-        if __msg:
-            self.stdscr.addstr(__msg)
+        if __msg: self.stdscr.addstr(__msg)
+        if clear is None: 
+            clear = lambda stdscr, _s, _i: self.stdscr.clrtoeol( )
         if not command: command = {}
         else:
             for key, cmd in command.items():
@@ -106,10 +109,11 @@ class Input(IInput, EngineComponent):
                     command.pop(key)
                     command[tuple(key)] = cmd
         
-        string: List[str] = []
-        bytes_buffer = bytearray()
-        y, x = self.stdscr.getyx()
-        index = 0
+        istring: List[str] = list()
+        ibuffer: List[str] = list()
+        y, x    = self.stdscr.getyx()
+        curpos  = 0
+        index   = 0
         curses.curs_set( cursor )
         
         quitkey = quitkey if isinstance(quitkey, int) else ord(quitkey)
@@ -124,67 +128,112 @@ class Input(IInput, EngineComponent):
             key = self.stdscr.getch()
             if key == quitkey:
                 break
-            elif key == curses.KEY_BACKSPACE and string and index:
-                if not clreol:
-                    self.stdscr.addstr(y, x + index, " ")
-                string.pop(index - 1)
-                index -= 1
+            elif key == curses.KEY_BACKSPACE and istring and curpos:
+                curpos, index = self.__handle_delete_char( istring, curpos, index )
             elif key >= 32 and key <= 126:
-                key = chr(key)
-                string.insert(index, key)
-                index += 1
-            elif key in arrow_key:
-                if key == curses.KEY_LEFT and index - 1 >= 0:
-                    index -= 1
-                elif key == curses.KEY_RIGHT and index < len(string):
-                    index += 1
-                elif key == curses.KEY_UP:
-                    index = 0
-                elif key == curses.KEY_DOWN:
-                    index = len(string)
+                curpos, index = self.__handle_key( istring, key, curpos, index )
             else:
-                # get keys buffer
-                self.stdscr.nodelay(1)
-                keys = [key]
-                while True:
-                    key = self.stdscr.getch()
-                    if key == -1: break
-                    keys.append(key)
-                self.stdscr.nodelay(0)
-                for key, cmd in command.items():
-                    if key in keys:
-                        index = cmd(string, index)
-                
-                # try decode keys buffer
-                try:
-                    bytes_buffer += bytes(keys)
-                    key = bytes_buffer.decode(coding)
-                    string.insert(index, key)
-                    index += 1
-                    bytes_buffer.clear()
-                except UnicodeDecodeError:
-                    continue
-                except ValueError:
-                    continue
+                curpos, index = self.__handle_command( istring, key, index, curpos, command, arrow_key, coding )
             
             self.stdscr.move(y, x)
-            if clreol:
-                self.stdscr.clrtoeol()
+            clear( self.stdscr, istring, curpos )
+            
             if mask is not None:
-                self.stdscr.addstr(mask * len(string))
+                # write mask
+                self.stdscr.addstr(mask * len(istring))
             else:
-                self.stdscr.addstr("".join(string))
-            self.stdscr.refresh()
-            self.stdscr.move(y, x + index)
-        return "".join(string)
+                # write string
+                self.stdscr.addstr("".join(istring))
+            
+            if istring != ibuffer:
+                self.stdscr.refresh()
+                ibuffer = istring.copy()
+            # move back cursor to the right position
+            self.stdscr.move(y, x + curpos)
+            
+        return "".join(istring)
+
+    def __handle_delete_char( self, istring: List[str], curpos: int, index: int ) -> Tuple[int, int]:
+        if index - 1 >= 0:
+            ksize = istring.pop(index - 1)
+            curpos -= wcwidth.wcswidth(ksize)
+            index -= 1
+        return curpos, index
+    
+    def __handle_key( self, istring: List[str], key: int, curpos: int, index: int ) -> Tuple[int, int]:
+        istring.insert(index, chr(key))
+        key_size = wcwidth.wcwidth(chr(key))
+        return curpos + key_size, index + 1
+
+    def __handle_command( self, 
+                         istring: List[str], 
+                         key: int, 
+                         index: int, 
+                         curpos: int, 
+                         command: Dict[Union[Tuple[int], int], Callable[..., Tuple[int, int]]], 
+                         arrow_key: List[int],
+                         coding: str) -> Tuple[int, int]:
+        if key in arrow_key:
+            if key == curses.KEY_LEFT:
+                if index - 1 < 0:
+                    return curpos, index
+                curpos -= wcwidth.wcswidth(istring[index - 1])
+                index -= 1
+            elif key == curses.KEY_RIGHT:
+                if index + 1 > len(istring):
+                    return curpos, index
+                curpos += wcwidth.wcswidth(istring[index])
+                index += 1
+            elif key == curses.KEY_UP:
+                curpos = 0
+            elif key == curses.KEY_DOWN:
+                curpos = 0
+                for c in istring:
+                    curpos += wcwidth.wcwidth(c)
+                index = len(istring)
+            return curpos, index
+        else:
+            buffer = self.__get_buffer( key )
+            # chech command
+            for key, cmd in command.items():
+                if key in buffer:
+                    curpos, index = cmd(istring, key, curpos, index)
+                    return curpos, index
+            
+            # try decode keys buffer
+            try:
+                unistr = bytearray( buffer ).decode( coding )
+                for uni_char in unistr:
+                    istring.insert(index, uni_char)
+                    curpos += wcwidth.wcswidth(uni_char)
+                    index += 1
                 
+            # 不处理错误, 代表用户输入的不是utf-8编码
+            except UnicodeDecodeError:  pass
+            except ValueError:          pass
+            return curpos, index
+                    
+    
+    def __get_buffer( self, key: int ) -> Tuple[int]:
+        # get keys buffer
+        self.delay = False
+        keys = [key]
+        while True:
+            key = self.stdscr.getch()
+            if key == -1: break
+            keys.append(key)
+        self.delay = True
+        return tuple(keys)
+        
+        
+          
     @property
     def delay( self ) -> bool:
         return self.__delay
     @delay.setter
     def delay( self, delay: bool ) -> None:
         self.__delay = delay
-        curses.curs_set( delay )
+        self.stdscr.nodelay( not delay )
     
     A = ord("a")
     B = ord("b")
