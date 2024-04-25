@@ -45,7 +45,6 @@ class Input(IInput, EngineComponent):
                 self.key_buffer.remove( key )
         
         curtime = time.time()
-        total_time = curtime - self.__timer
         if curtime - self.__timer >= __ms / 1000:
             self.__allow = True
             self.__timer = -1
@@ -117,12 +116,12 @@ class Input(IInput, EngineComponent):
         curses.curs_set( cursor )
         
         quitkey = quitkey if isinstance(quitkey, int) else ord(quitkey)
-        arrow_key = [
+        arrow_key = (
             curses.KEY_LEFT,
             curses.KEY_RIGHT,
             curses.KEY_UP,
             curses.KEY_DOWN
-        ]
+        )
         
         while True:
             key = self.stdscr.getch()
@@ -197,7 +196,7 @@ class Input(IInput, EngineComponent):
             # chech command
             for key, cmd in command.items():
                 if key in buffer:
-                    curpos, index = cmd(istring, key, curpos, index)
+                    curpos, index = cmd(istring, curpos, index)
                     return curpos, index
             
             # try decode keys buffer
@@ -224,8 +223,6 @@ class Input(IInput, EngineComponent):
             keys.append(key)
         self.delay = True
         return tuple(keys)
-        
-        
           
     @property
     def delay( self ) -> bool:
