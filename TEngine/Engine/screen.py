@@ -4,6 +4,7 @@ from typing import *
 from .engine_component import EngineComponent
 from ..Components.text import Text as IText
 from ..interfaces import Screen as IScreen
+from .renderer import Renderer as IRenderer
 
 __all__ = ["Screen"]
 
@@ -17,6 +18,7 @@ class Screen( IScreen, EngineComponent ):
     
     def __init(self) -> None:
         super().__init__()
+        self._renderer = IRenderer( )
 
     @property
     def size(self) -> Tuple[int, int]:
@@ -44,7 +46,7 @@ class Screen( IScreen, EngineComponent ):
         if x is None and y is None:
             y, x = self.stdscr.getyx()
             
-        msg.set_position(x, y)    
+        msg.set_position(x, y)
         try:
             self.stdscr.move(y, x)
             self.stdscr.addstr( msg.__str__() )
@@ -57,6 +59,10 @@ class Screen( IScreen, EngineComponent ):
             
     def clear(self) -> None:
         self.stdscr.clear()
+    
+    def _write( self, msg: str, x: int, y: int ) -> None:
+        self.stdscr.move(y, x)
+        self.stdscr.addstr(msg)
     
     def move(self, __x: int, __y: int) -> None:
         self.stdscr.move(__y, __x)
