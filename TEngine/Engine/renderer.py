@@ -23,8 +23,8 @@ class Renderer( IRenderer, EngineComponent ):
         self.oncolor            : List[int]         = []
     
     def create(self, name: str, fg: str, bg: str = "#000000") -> None:
-        fgcolor = self.push_cache( fg )
-        bgcolor = self.push_cache( bg )
+        fgcolor = self.__push_cache( fg )
+        bgcolor = self.__push_cache( bg )
         
         self.pairs[name] = self.index
         curses.init_pair( self.index, fgcolor, bgcolor )
@@ -36,11 +36,16 @@ class Renderer( IRenderer, EngineComponent ):
             if isinstance( pair_name, int ):
                 self.stdscr.attron( pair_name )
                 self.oncolor.append( pair_name )
-            else:
-                pair = self.pairs.get( pair_name )
-                cpair = curses.color_pair( pair )
-                self.stdscr.attron( cpair )
-                self.oncolor.append( pair_name )
+                return
+            
+            if isinstance( pair_name, (tuple, list) ):
+                self.create( "cache", *pair_name )
+                pair_name = "cache"
+                
+            pair = self.pairs.get( pair_name )
+            cpair = curses.color_pair( pair )
+            self.stdscr.attron( cpair )
+            self.oncolor.append( pair_name )
 
     def stop(self, *__name: Tuple[str, int]) -> None:
         if not __name:
@@ -71,14 +76,14 @@ class Renderer( IRenderer, EngineComponent ):
             self.pairs = data.get( "pairs" )
             self.index = data.get( "index" )
 
-    def push_cache(self, __name: str) -> int:
+    def __push_cache(self, __name: str) -> int:
         if __name in self.cache_color:
             return self.cache_color.get( __name )
         self.cache_color[__name] = self.index
         curses.init_color( self.index, *self.convert(__name))
         self.index += 1
         return self.index - 1
-
+    
     def convert(self, __hex: str) -> int:
         R, G, B = int(__hex[1:3], 16), int(__hex[3:5], 16), int(__hex[5:7], 16)
         R = int(R * 1000 / 255)
