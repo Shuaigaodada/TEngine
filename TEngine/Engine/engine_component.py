@@ -5,7 +5,7 @@ from ..Components.filelogger import FileLogger
 __all__ = ["EngineComponent"]
 
 class EngineComponent:
-    def __init__( self, stdscr: Optional[cwindow] = None, logger: Optional[FileLogger] = None ) -> None:
+    def __init( self, stdscr: Optional[cwindow] = None, logger: Optional[FileLogger] = None ) -> None:
         self.logger: Optional[FileLogger] = logger
         self.stdscr: Optional[cwindow] = stdscr
         return
