@@ -3,6 +3,7 @@ from typing import List, Union, Optional
 from ..Engine.clickbox import ClickBox
 from ..interfaces import Text as IText
 from ..Engine.mouse import Mouse as IMouse
+from ..Engine.renderer import Renderer as IRenderer
 
 __all__ = [ "Text" ]
 
@@ -18,23 +19,43 @@ class Text( IText ):
         self.__str = string
         self.__x   = -1
         self.__y   = -1
+        self.__attr= []
         self._id   = len(Text.__list)
+        self.__bn  = "text"
         return
     
     @property
     def click_box( self ) -> ClickBox:
-        return ClickBox( self.__x, self.__y, self.__x + len( self ), self.__y )
+        return ClickBox( self.__x, self.__y, self.__x + len( self ) - 1, self.__y )
 
     def set_clickbox(self, __name: str) -> None:
         """给文本设置点击框"""
         mouse = IMouse()
         box = self.click_box
         mouse.set_cb( __name, box.x, box.y, box.w, box.h )
+        self.__bn = __name
+    
+    def replace( self, new_x: int, new_y: int ) -> None:
+        from ..Engine.screen import Screen as IScreens
+
+        screen = IScreens( )
+        renderer = IRenderer( )
+        
+        screen._write( " ", self.__x, self.__y )
+        if self.__attr:
+            renderer.start( self.__attr )
+        screen.write( self, new_x, new_y ).set_clickbox( self.__bn )
+        if self.__attr:
+            renderer.stop( self.__attr )
     
     def set_position(self, __x: int, __y: int) -> None:
         """设置文本位置"""
         self.__x = __x
         self.__y = __y
+    
+    def _set_attr(self, __attr: List[int]) -> None:
+        """设置文本属性"""
+        self.__attr = __attr
     
     def __str__( self ) -> str:
         return self.__str
