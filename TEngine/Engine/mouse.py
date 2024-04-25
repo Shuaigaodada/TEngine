@@ -29,6 +29,11 @@ class Mouse( IMouse, EngineComponent ):
         curses.mouseinterval(interval)
         if drag: print("\033[?1003h", end="", flush=True)
     
+    def quit( self ) -> None:
+        """退出鼠标事件"""
+        curses.mousemask(0)
+        print("\033[?1003l", end="", flush=True)
+    
     def clear_cb(self) -> None:
         """清除所有点击框"""
         self.clickbox.clear()
