@@ -138,7 +138,7 @@ class Player:
         if len(self.cards) >= self.population + self.preparation:
             if self.cardPile.get( index ) is not None:
                 if self.check_buystar( self.cardPile[ index ] ):
-                    
+                    pass
         
         card_cost = self.cardPile[ index ].cost if not free else 0
         

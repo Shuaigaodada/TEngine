@@ -39,7 +39,7 @@ def main( *args, **kwargs ):
     server.listen( )
     
     logger.info( "waiting for clients" )
-    server.accept_for( 1 ) # test for 1 clients
+    server.accept_for( 2 ) # test for 2 clients
     
     logger.info( "init game" )
     # init game
