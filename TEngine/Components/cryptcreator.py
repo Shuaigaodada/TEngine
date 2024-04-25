@@ -5,6 +5,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import BestAvailableEncryption, Encoding, PrivateFormat, NoEncryption
 from cryptography.hazmat.backends import default_backend
+from cryptography.x509.oid import ExtensionOID
 import typing as T
 import datetime
 
@@ -47,7 +48,10 @@ class CryptCreator(ICryptCreator):
         self.valid_after = valid_after
         self.not_valid_before = not_valid_before
         self.not_valid_after = not_valid_after
-        self.extension = extension
+        if extension is None:
+            self.extension = x509.SubjectAlternativeName([x509.DNSName(commonName)])
+        else:
+            self.extension = extension
         return
     
     def sign(self) -> None:
