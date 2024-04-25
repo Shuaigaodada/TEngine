@@ -24,6 +24,7 @@ class SocketServer( ISocketServer ):
                 *, 
                 family: Union[str, int] = "IPv4", 
                 proto: Union[str, int] = "TCP" ) -> "SocketServer":
+        # 重写__new__方法，实现单例模式
         if cls.__instance is None:
             cls.__instance = super().__new__( cls )
             cls.__instance.__init(
@@ -71,7 +72,7 @@ class SocketServer( ISocketServer ):
         
         self.set_opt( socket.SOL_SOCKET, socket.SO_REUSEADDR, True )
 
-    def find(self, __noc: Union[SSClient, str, int, socket.socket]) -> SSClient:
+    def find(self, __noc: Union[SSClient, str, int, socket.socket]) -> Optional[SSClient]:
         """根据不同的标识符（名称、索引、SSClient实例或套接字）查找并返回对应的客户端实例。
         
         参数:
@@ -81,23 +82,28 @@ class SocketServer( ISocketServer ):
             对应的SSClient实例。
             
         抛出:
-            ValueError: 如果无法找到对应的客户端。
+            IndexError: 如果超出索引
             TypeError: 如果__noc的类型不被支持。
         """
         if isinstance( __noc, str ):
             for client in self.clients:
                 if client.name == __noc:
                     return client
-            raise ValueError( f"Client not found: {__noc}" )
+            return None
         elif isinstance( __noc, int ):
-            return self.clients[__noc]
+            if __noc < len(self.clients):
+                return self.clients[__noc]
+            else:
+                raise IndexError( f"Client index out of range: {__noc}" )
         elif isinstance( __noc, SSClient ):
-            return __noc
+            if __noc in self.clients:
+                return __noc
+            else: return None
         elif isinstance( __noc, socket.socket ):
             for client in self.clients:
                 if client.socket == __noc:
                     return client
-            raise ValueError( f"Client not found: {__noc}" )
+            return None
         else:
             raise TypeError( f"Unknow type: {type(__noc).__name__}" )
     
@@ -106,10 +112,16 @@ class SocketServer( ISocketServer ):
         
         参数:
             __noc: 要移除的客户端的标识符。
+        
+        抛出:
+            IndexError: 如果超出索引
+            TypeError: 如果__noc的类型不被支持。
         """
         client = self.find( __noc )
-        client.disconnect()
-        self.clients.remove( client )
+        if client is not None:
+            client.disconnect()
+            self.clients.remove( client )
+        # if client is None, do nothing
     
     def rename(self, __noc: Union[SSClient, str, socket.socket], __name: str) -> None:
         """给指定的客户端重命名。
@@ -117,9 +129,17 @@ class SocketServer( ISocketServer ):
         参数:
             __noc: 要重命名的客户端的标识符。
             __name: 新的名称。
+        
+        抛出:
+            ValueError: 如果未找到客户端。
+            IndexError: 如果超出索引
+            TypeError: 如果__noc的类型不被支持。
         """
         client = self.find( __noc )
-        client.name = __name
+        if client is not None:
+            client.name = __name
+        else:
+            raise ValueError( f"Client not found: {__noc}" )
     
     def set_opt( self, __lvl: int, __opt: int, __val: bool ) -> None:
         """设置套接字选项。
@@ -129,7 +149,10 @@ class SocketServer( ISocketServer ):
             __opt: 要设置的选项。
             __val: 设置的值。
         """
-        self.socket.setsockopt( __lvl, __opt, __val )
+        try:
+            self.socket.setsockopt( __lvl, __opt, __val )
+        except socket.error as e:
+            raise socket.error( f"Failed to set socket option: {e}" )
     def set_wrapper(self, **kwargs) -> None:
         """设置SSL封装的参数。
         
@@ -146,6 +169,9 @@ class SocketServer( ISocketServer ):
             __kf: 私钥文件路径。
             checkhost: 是否检查主机名。
             **context_kwargs: 其他SSL上下文配置选项。
+        
+        抛出:
+            FileNotFoundError: 如果证书文件或私钥文件不存在。
         """
         try:
             if not context_kwargs:
@@ -164,6 +190,8 @@ class SocketServer( ISocketServer ):
             __addr: 绑定的地址。
             __port: 绑定的端口。
         """
+        if self.__binded:
+            return
         address = __addr if __addr is not None else self.address
         port    = __port if __port is not None else self.port
         self.socket.bind( (address, port) )
@@ -176,6 +204,7 @@ class SocketServer( ISocketServer ):
             __backlog: 连接队列的大小。
         """
         if not self.__binded:
+            # if not bind before, auto bind
             self.bind()
         self.socket.listen( __backlog )
     
@@ -303,11 +332,7 @@ class SocketServer( ISocketServer ):
             __flag: 发送操作的标志（socket模块中的标志）。
             convert: 是否自动将数据转换为bytes。
 
-        抛出:
-            ValueError: 如果客户端不在服务器的客户端列表中。
         """
-        if __c not in self.clients:
-            raise ValueError( f"Client not found: {__c}" )
         if convert: __d = IConverter.encode( __d )
         
         bsize = struct.pack( self.bsize_fmt, len(__d) )
